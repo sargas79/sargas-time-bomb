@@ -9,7 +9,7 @@ events. It is designed as a companion to **Through the Ages** (`through-the-ages
 v2.1.0), which supplies the campaign calendar and clock, while still working in a
 world that does not run it.
 
-Status: approved plan; implementation not started. Work is tracked in issue #1
+Status: approved plan; implemented on this branch (M0–M6). Work is tracked in issue #1
 and its sub-issues.
 
 ---

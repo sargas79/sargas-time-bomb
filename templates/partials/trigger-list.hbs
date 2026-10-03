@@ -1,0 +1,120 @@
+<fieldset class="stb-fieldset stb-triggers">
+  <legend>{{stbT 'Editor.triggers'}} <small>{{triggers.length}}/{{limits.TRIGGERS_MAX}}</small></legend>
+  <p class="hint">{{stbT 'Editor.triggersHint'}}</p>
+  {{#each triggers}}
+    <div class="stb-trigger" data-index="{{index}}">
+      <header class="stb-trigger__header">
+        <strong><i class="fa-solid fa-bolt"></i> {{typeLabel}}</strong>
+        <span class="stb-trigger__text">{{text}}</span>
+        {{#unless ../readonly}}<button type="button" data-action="removeTrigger" data-index="{{index}}" title="{{stbT 'Editor.remove'}}"><i class="fa-solid fa-xmark"></i></button>{{/unless}}
+      </header>
+      <input type="hidden" name="triggers.{{index}}.type" value="{{type}}">
+      <div class="stb-trigger__row">
+        <label>{{stbT 'Editor.advance'}}</label>
+        <select name="triggers.{{index}}.advanceMode" {{#if ../readonly}}disabled{{/if}}>
+          <option value="steps" {{#if (stbEq advanceMode 'steps')}}selected{{/if}}>{{stbT 'Advance.steps'}}</option>
+          <option value="complete" {{#if (stbEq advanceMode 'complete')}}selected{{/if}}>{{stbT 'Advance.complete'}}</option>
+          <option value="reset" {{#if (stbEq advanceMode 'reset')}}selected{{/if}}>{{stbT 'Advance.reset'}}</option>
+        </select>
+        {{#if (stbEq advanceMode 'steps')}}
+          <input type="number" name="triggers.{{index}}.advanceSteps" value="{{advanceSteps}}" min="-{{../limits.ADVANCE_MAX}}" max="{{../limits.ADVANCE_MAX}}" class="stb-w-4" {{#if ../readonly}}disabled{{/if}}>
+        {{/if}}
+      </div>
+
+      {{#if isScene}}
+        <div class="stb-trigger__row">
+          <label>{{stbT 'Editor.scenes'}}</label>
+          <select name="triggers.{{index}}.scenes" multiple size="4" {{#if ../readonly}}disabled{{/if}}>
+            {{#each scenes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+          </select>
+          <span class="hint">{{stbT 'Editor.scenesHint'}}</span>
+        </div>
+      {{/if}}
+
+      {{#if isRest}}
+        <span class="hint">{{stbT 'Editor.restHint'}}</span>
+      {{/if}}
+
+      {{#if isTime}}
+        <div class="stb-trigger__row stb-every">
+          <label>{{stbT 'Editor.every'}}</label>
+          <input type="number" name="triggers.{{index}}.every.weeks" value="{{every.weeks}}" min="0" placeholder="0" class="stb-w-3" {{#if ../readonly}}disabled{{/if}}> <span>{{stbT 'Unit.weeks'}}</span>
+          <input type="number" name="triggers.{{index}}.every.days" value="{{every.days}}" min="0" placeholder="0" class="stb-w-3" {{#if ../readonly}}disabled{{/if}}> <span>{{stbT 'Unit.days'}}</span>
+          <input type="number" name="triggers.{{index}}.every.hours" value="{{every.hours}}" min="0" placeholder="0" class="stb-w-3" {{#if ../readonly}}disabled{{/if}}> <span>{{stbT 'Unit.hours'}}</span>
+          <label class="checkbox"><input type="checkbox" name="triggers.{{index}}.once" {{#if once}}checked{{/if}} {{#if ../readonly}}disabled{{/if}}> {{stbT 'Editor.once'}}</label>
+        </div>
+        {{#unless ../hasCalendar}}<span class="hint">{{stbT 'Editor.timeWorldHint'}}</span>{{/unless}}
+      {{/if}}
+
+      {{#if isDate}}
+        <div class="stb-trigger__row stb-date">
+          <label>{{stbT 'Editor.dateAt'}}</label>
+          <input type="number" name="triggers.{{index}}.at.day" value="{{at.day}}" min="1" class="stb-w-3" aria-label="{{stbT 'Unit.day'}}" {{#if ../readonly}}disabled{{/if}}>
+          {{#if monthOptions}}
+            <select name="triggers.{{index}}.at.month" {{#if ../readonly}}disabled{{/if}}>
+              {{#each monthOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+            </select>
+          {{else}}
+            <input type="number" name="triggers.{{index}}.at.month" value="{{at.month}}" min="0" class="stb-w-3" aria-label="{{stbT 'Unit.month'}}" {{#if ../readonly}}disabled{{/if}}>
+          {{/if}}
+          <input type="number" name="triggers.{{index}}.at.year" value="{{at.year}}" class="stb-w-4" aria-label="{{stbT 'Unit.year'}}" {{#if ../readonly}}disabled{{/if}}>
+          <span class="stb-date__time">
+            <input type="number" name="triggers.{{index}}.at.hour" value="{{at.hour}}" min="0" max="23" class="stb-w-3" aria-label="{{stbT 'Unit.hour'}}" {{#if ../readonly}}disabled{{/if}}>:<input type="number" name="triggers.{{index}}.at.minute" value="{{at.minute}}" min="0" max="59" class="stb-w-3" aria-label="{{stbT 'Unit.minute'}}" {{#if ../readonly}}disabled{{/if}}>
+          </span>
+        </div>
+        <div class="stb-trigger__row">
+          <label class="checkbox"><input type="checkbox" name="triggers.{{index}}.repeat" {{#if repeat}}checked{{/if}} {{#if ../readonly}}disabled{{/if}}> {{stbT 'Editor.repeatEvery'}}</label>
+          {{#if repeat}}
+            <input type="number" name="triggers.{{index}}.repeatEvery.weeks" value="{{repeatEvery.weeks}}" min="0" placeholder="0" class="stb-w-3" {{#if ../readonly}}disabled{{/if}}> <span>{{stbT 'Unit.weeks'}}</span>
+            <input type="number" name="triggers.{{index}}.repeatEvery.days" value="{{repeatEvery.days}}" min="0" placeholder="0" class="stb-w-3" {{#if ../readonly}}disabled{{/if}}> <span>{{stbT 'Unit.days'}}</span>
+            <input type="number" name="triggers.{{index}}.repeatEvery.hours" value="{{repeatEvery.hours}}" min="0" placeholder="0" class="stb-w-3" {{#if ../readonly}}disabled{{/if}}> <span>{{stbT 'Unit.hours'}}</span>
+          {{/if}}
+        </div>
+      {{/if}}
+
+      {{#if isHook}}
+        <div class="stb-trigger__row">
+          <label>{{stbT 'Editor.hook'}}</label>
+          <select name="triggers.{{index}}.hookSelect" {{#if ../readonly}}disabled{{/if}}>
+            {{#each curatedHooks}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+            <option value="__custom" {{#if isCustomHook}}selected{{/if}}>{{stbT 'Hook.custom'}}</option>
+          </select>
+          {{#if isCustomHook}}
+            <input type="text" name="triggers.{{index}}.hookCustom" value="{{hook}}" placeholder="moduleId.someHook" pattern="[\w.:-]+" {{#if ../readonly}}disabled{{/if}}>
+          {{/if}}
+        </div>
+        <span class="hint">{{stbT 'Editor.hookHint'}}</span>
+      {{/if}}
+
+      {{#if isLinked}}
+        <div class="stb-trigger__row">
+          <label>{{stbT 'Editor.linkedClock'}}</label>
+          <select name="triggers.{{index}}.clockId" {{#if ../readonly}}disabled{{/if}}>
+            <option value="">—</option>
+            {{#each clocks}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}{{#if group}} ({{group}}){{/if}}</option>{{/each}}
+          </select>
+          <select name="triggers.{{index}}.when" {{#if ../readonly}}disabled{{/if}}>
+            {{#each whenOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+          </select>
+          {{#if (stbEq when 'threshold')}}
+            <select name="triggers.{{index}}.at" {{#if ../readonly}}disabled{{/if}}>
+              <option value="">{{stbT 'Trigger.anyThreshold'}}</option>
+              {{#each targetThresholds}}<option value="{{at}}" {{#if selected}}selected{{/if}}>{{at}}{{#if label}} · {{label}}{{/if}}</option>{{/each}}
+            </select>
+          {{/if}}
+        </div>
+      {{/if}}
+    </div>
+  {{/each}}
+  {{#unless readonly}}
+    {{#if canAddTrigger}}
+      <div class="stb-trigger__add">
+        <select name="newTriggerType" data-no-rerender>
+          {{#each triggerTypes}}<option value="{{value}}">{{label}}</option>{{/each}}
+        </select>
+        <button type="button" data-action="addTrigger"><i class="fa-solid fa-plus"></i> {{stbT 'Editor.addTrigger'}}</button>
+      </div>
+    {{/if}}
+    {{#unless hasCalendar}}<p class="hint"><i class="fa-solid fa-circle-info"></i> {{stbT 'Editor.noCalendarHint'}}</p>{{/unless}}
+  {{/unless}}
+</fieldset>

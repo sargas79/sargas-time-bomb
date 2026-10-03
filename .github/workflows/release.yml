@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Resolve version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: npm test
+
+      - name: Stamp version into manifest
+        run: |
+          node - <<'JS'
+          const fs = require("node:fs");
+          const version = process.env.VERSION;
+          const repo = process.env.GITHUB_REPOSITORY;
+          const m = JSON.parse(fs.readFileSync("module.json", "utf8"));
+          m.version = version;
+          m.manifest = `https://github.com/${repo}/releases/latest/download/module.json`;
+          m.download = `https://github.com/${repo}/releases/download/v${version}/sargas-time-bomb.zip`;
+          fs.writeFileSync("module.json", JSON.stringify(m, null, 2) + "\n");
+          JS
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Check manifest
+        run: node tools/check-manifest.mjs
+
+      - name: Reconcile changelog
+        id: changelog
+        run: node .github/scripts/release-changelog.mjs "${{ steps.version.outputs.version }}" > release-notes.md
+
+      - name: Build zip
+        run: |
+          zip -r sargas-time-bomb.zip \
+            module.json README.md CHANGELOG.md LICENSE \
+            lang scripts styles templates \
+            -x '*.test.js' -x '*/.DS_Store'
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          files: |
+            module.json
+            sargas-time-bomb.zip
