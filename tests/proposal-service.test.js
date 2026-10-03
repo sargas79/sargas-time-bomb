@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { installFoundryStub } from "./helpers/foundry-stub.js";
 import { MODULE_ID } from "../scripts/constants.js";
 import { createClock } from "../scripts/services/clock-service.js";
-import { PROPOSAL_OPS, buildProposal, createLocalRelay, validateProposal } from "../scripts/services/proposal-service.js";
+import { PROPOSAL_OPS, approveProposal, buildProposal, createLocalRelay, getProposals, handleProposal, validateProposal } from "../scripts/services/proposal-service.js";
+import * as store from "../scripts/services/store-service.js";
+import * as dispatcher from "../scripts/services/dispatcher-service.js";
 
 const player = { id: "p1", name: "Pat", isGM: false };
 const gm = { id: "gm1", name: "GM", isGM: true };
@@ -107,5 +109,31 @@ test("local relay: identity comes from the document, never from who planted the 
     await p1.update({ [`flags.${MODULE_ID}.requests.r2`]: { operation: "probe", payload: {} } }, "p1");
     assert.deepEqual(seen, ["p1", "p1"]);
     assert.ok(!seen.includes("p2"));
+  } finally { stub.uninstall(); }
+});
+
+test("proposals: full records stay on the GM entry, players see only pending state; approval applies and clears", async () => {
+  const stub = installFoundryStub({ users: [{ id: "gm1", isGM: true, active: true }, { id: "p1", isGM: false, active: true }], currentUserId: "gm1" });
+  try {
+    stub.settings.set(`${MODULE_ID}.allowProposals`, true);
+    stub.settings.set(`${MODULE_ID}.proposals`, []);
+    await store.ensurePrivateEntry();
+    const clock = createClock({ kind: "project", name: "Dig", visibility: "players", segments: 4, ownerUserId: "p1" });
+    await store.writeBatch({ upsert: [clock] });
+    const pat = { id: "p1", name: "Pat", isGM: false, active: true };
+
+    const { id } = await handleProposal(PROPOSAL_OPS.ADVANCE, { clockId: clock.id, delta: 1 }, pat);
+    assert.equal(getProposals().length, 1);
+    assert.equal(getProposals()[0].userName, "Pat");
+    const shared = stub.settings.get(`${MODULE_ID}.proposals`);
+    assert.deepEqual(Object.keys(shared[0]).sort(), ["at", "clockId", "id", "operation", "userId"], "no names or text in the world setting");
+    await assert.rejects(handleProposal(PROPOSAL_OPS.ADVANCE, { clockId: clock.id, delta: 1 }, pat), /duplicate/);
+
+    await approveProposal(id, { dispatcher });
+    assert.equal(store.getClock(clock.id).filled, 1);
+    assert.equal(store.getClock(clock.id).log[0].userId, "p1", "the proposer is on the log entry");
+    assert.equal(store.getClock(clock.id).log[0].source, "proposal");
+    assert.equal(getProposals().length, 0);
+    assert.ok(stub.chat.some(m => Array.isArray(m.whisper) && m.whisper.includes("p1")), "the player was told");
   } finally { stub.uninstall(); }
 });

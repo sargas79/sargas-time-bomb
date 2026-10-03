@@ -432,6 +432,16 @@ export function completeClock(input, context = {}) {
   return applyDelta(input, remaining(input), context);
 }
 
+/** Append a note to the audit log without moving the clock. */
+export function annotateClock(input, note, context = {}) {
+  const clock = structuredClone(input);
+  const text = typeof note === "string" ? note.trim() : "";
+  if (!text) return { clock, events: [], changed: false };
+  appendLog(clock, makeLogEntry(clock, 0, { ...context, note: text }));
+  touch(clock, context);
+  return { clock, events: [{ type: "annotated", note: text }], changed: true };
+}
+
 export function dismissClock(input, context = {}) {
   const clock = structuredClone(input);
   clock.dismissed = true;

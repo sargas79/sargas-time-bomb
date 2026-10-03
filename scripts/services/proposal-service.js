@@ -9,7 +9,7 @@
  * Pending proposals live in the world setting `proposals` (written by the
  * primary GM), so every client can show a card's pending state.
  */
-import { LIMITS, MODULE_ID, SETTINGS, TTA_ID, VISIBILITY } from "../constants.js";
+import { FLAG_PROPOSALS, MODULE_ID, SETTINGS, TTA_ID, VISIBILITY } from "../constants.js";
 import { debug, getSetting, notify, randomID, rerenderModuleApps, setSetting, t, warn } from "../compat.js";
 import { canView } from "./permission-service.js";
 import * as store from "./store-service.js";
@@ -71,7 +71,19 @@ export function buildProposal({ id = randomID(), clock, user, operation, payload
 /*  Storage                                                            */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Pending proposals. The full records (note text, clock names) live on the
+ * GM-only journal entry; the world setting carries only what a player's card
+ * needs to show "pending": id, clock, user and operation. A player therefore
+ * sees their own pending state without any other player's note text leaving
+ * the GM's store.
+ */
 export function getProposals() {
+  if (globalThis.game?.user?.isGM) {
+    const entry = store.getPrivateEntry();
+    const raw = entry?.getFlag(MODULE_ID, FLAG_PROPOSALS) ?? [];
+    return Array.isArray(raw) ? raw.filter(p => p && typeof p === "object" && p.id) : [];
+  }
   try { return (getSetting(SETTINGS.proposals) ?? []).filter(p => p && typeof p === "object" && p.id); }
   catch { return []; }
 }
@@ -84,8 +96,27 @@ export function proposalsEnabled() {
   try { return !!getSetting(SETTINGS.allowProposals); } catch { return false; }
 }
 
-function writeProposals(list) {
-  return store.writeQueue.enqueue(() => setSetting(SETTINGS.proposals, list));
+function publicView(p) {
+  return { id: p.id, clockId: p.clockId, userId: p.userId, operation: p.operation, at: p.at };
+}
+
+/** Write the full list to the GM store and the stripped list to the world setting. Caller is inside the queue. */
+async function persistProposals(list) {
+  const entry = await store.ensurePrivateEntry();
+  if (entry) await entry.update({ [`flags.${MODULE_ID}.${FLAG_PROPOSALS}`]: list });
+  await setSetting(SETTINGS.proposals, list.map(publicView));
+  return list;
+}
+
+/** Read-modify-write under the shared write queue so two requests cannot overwrite each other. */
+function updateProposals(mutate) {
+  return store.writeQueue.enqueue(async () => {
+    const current = getProposals();
+    const next = await mutate(current);
+    if (next === null) return current;
+    await persistProposals(next);
+    return next;
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -102,7 +133,9 @@ let relay = null;
 export function createLocalRelay({ moduleId, requestTimeoutMs = 15000, isPrimary }) {
   const pending = new Map();
   const handlers = new Map();
+  /** Ids this GM client already executed; bounded so a long session cannot grow it without limit. */
   const executed = new Set();
+  const EXECUTED_MAX = 500;
   let registered = false;
   const reqPath = id => `flags.${moduleId}.requests.${id}`;
   const resPath = id => `flags.${moduleId}.responses.${id}`;
@@ -129,6 +162,7 @@ export function createLocalRelay({ moduleId, requestTimeoutMs = 15000, isPrimary
     for (const [id, entry] of Object.entries(requests)) {
       if (!entry || typeof entry !== "object" || executed.has(id)) continue;
       executed.add(id);
+      if (executed.size > EXECUTED_MAX) executed.delete(executed.values().next().value);
       const response = { ok: false };
       try {
         const handler = handlers.get(entry.operation);
@@ -146,7 +180,9 @@ export function createLocalRelay({ moduleId, requestTimeoutMs = 15000, isPrimary
     const responses = user.getFlag(moduleId, "responses") ?? {};
     for (const [id, response] of Object.entries(responses)) {
       const record = pending.get(id);
-      if (!record) continue;
+      // A response to a request this client gave up on (timeout, reload) is still
+      // ours to clear, or it would sit on the document forever.
+      if (!record) { globalThis.game.user.update({ [delRes(id)]: null }).catch(() => {}); continue; }
       pending.delete(id);
       clearTimeout(record.timeout);
       globalThis.game.user.update({ [delRes(id)]: null }).catch(() => {});
@@ -202,7 +238,7 @@ function actorOwnedBy(clock, user) {
   try { return actor.testUserPermission(user, level); } catch { return false; }
 }
 
-/** Executed on the primary GM for a relayed request. Returns the stored proposal. */
+/** Executed on the primary GM for a relayed request. Returns the stored proposal id. */
 export async function handleProposal(operation, payload, user) {
   if (!proposalsEnabled()) throw new Error(t("Proposal.Error.disabled"));
   if (!user?.active) throw new Error(t("Proposal.Error.inactive"));
@@ -210,14 +246,16 @@ export async function handleProposal(operation, payload, user) {
   const check = validateProposal(clock, user, operation, payload, { actorOwner: clock ? actorOwnedBy(clock, user) : null });
   if (!check.ok) throw new Error(t(`Proposal.Error.${check.code}`));
   if (!canView(clock, user)) throw new Error(t("Proposal.Error.notOwner"));
-  const existing = getProposals();
-  if (existing.length >= PROPOSAL_LIMITS.PENDING_MAX) throw new Error(t("Proposal.Error.queueFull"));
-  if (existing.filter(p => p.userId === user.id).length >= PROPOSAL_LIMITS.PENDING_PER_USER) throw new Error(t("Proposal.Error.tooMany"));
-  if (operation === PROPOSAL_OPS.ADVANCE && existing.some(p => p.clockId === clock.id && p.userId === user.id && p.operation === operation)) {
-    throw new Error(t("Proposal.Error.duplicate"));
-  }
   const record = buildProposal({ clock, user, operation, payload });
-  await writeProposals([...existing, record]);
+  // Limits and duplicates are judged against the list as it is at write time.
+  await updateProposals(existing => {
+    if (existing.length >= PROPOSAL_LIMITS.PENDING_MAX) throw new Error(t("Proposal.Error.queueFull"));
+    if (existing.filter(p => p.userId === user.id).length >= PROPOSAL_LIMITS.PENDING_PER_USER) throw new Error(t("Proposal.Error.tooMany"));
+    if (operation === PROPOSAL_OPS.ADVANCE && existing.some(p => p.clockId === clock.id && p.userId === user.id && p.operation === operation)) {
+      throw new Error(t("Proposal.Error.duplicate"));
+    }
+    return [...existing, record];
+  });
   notify("info", t("Proposal.Notify.received", { user: record.userName, clock: clock.name }));
   rerenderModuleApps();
   return { id: record.id };
@@ -225,39 +263,39 @@ export async function handleProposal(operation, payload, user) {
 
 /** Approve: run the change with the proposer recorded, then drop the proposal. GM. */
 export async function approveProposal(id, { dispatcher }) {
-  const list = getProposals();
-  const p = list.find(x => x.id === id);
+  const p = getProposals().find(x => x.id === id);
   if (!p) return null;
   const clock = store.getClock(p.clockId);
   let result = null;
+  let outcome = { approved: false, reason: t("Proposal.Error.noClock") };
   if (clock) {
-    if (p.operation === PROPOSAL_OPS.ADVANCE) {
-      result = await dispatcher.runBatch({ ops: [{ clockId: clock.id, op: "delta", value: p.delta, source: "proposal", note: t("Proposal.Log.approved", { user: p.userName }) }], context: { source: "proposal", userId: p.userId } });
-    } else if (p.operation === PROPOSAL_OPS.NOTE) {
-      result = await dispatcher.runBatch({ ops: [{ clockId: clock.id, op: "delta", value: 0, source: "proposal", note: p.text }], context: { source: "proposal", userId: p.userId } });
-      // A zero delta records nothing, so write the note as its own log entry.
-      const fresh = store.getClock(clock.id);
-      if (fresh) {
-        const entry = { at: new Date().toISOString(), campaignMoment: null, worldTime: globalThis.game?.time?.worldTime ?? null, userId: p.userId, source: "proposal", delta: 0, filled: fresh.filled, note: p.text };
-        await store.writeBatch({ upsert: [{ ...fresh, log: [entry, ...(fresh.log ?? [])].slice(0, LIMITS.LOG_MAX) }] });
-      }
-    }
+    const op = p.operation === PROPOSAL_OPS.ADVANCE
+      ? { clockId: clock.id, op: "delta", value: p.delta, source: "proposal", note: t("Proposal.Log.approved", { user: p.userName }) }
+      : { clockId: clock.id, op: "note", value: p.text, source: "proposal" };
+    result = await dispatcher.runBatch({ ops: [op], context: { source: "proposal", userId: p.userId } });
+    outcome = result?.changed?.length
+      ? { approved: true }
+      : { approved: false, reason: t("Proposal.Error.noChange") };
   }
-  await writeProposals(list.filter(x => x.id !== id));
-  whisper(p, true);
+  await removeProposal(id);
+  whisper(p, outcome.approved, outcome.reason ?? "");
   rerenderModuleApps();
   return result;
 }
 
 /** Reject: drop the proposal and tell the proposer. GM. */
 export async function rejectProposal(id, reason = "") {
-  const list = getProposals();
-  const p = list.find(x => x.id === id);
+  const p = getProposals().find(x => x.id === id);
   if (!p) return false;
-  await writeProposals(list.filter(x => x.id !== id));
+  await removeProposal(id);
   whisper(p, false, reason);
   rerenderModuleApps();
   return true;
+}
+
+/** Drop one proposal, re-reading the list at write time so arrivals during an await survive. */
+function removeProposal(id) {
+  return updateProposals(current => (current.some(x => x.id === id) ? current.filter(x => x.id !== id) : null));
 }
 
 function whisper(p, approved, reason = "") {

@@ -56,7 +56,7 @@
       },
       "allowProposals": {
         "name": "Allow player proposals",
-        "hint": "Players may propose a +1 on a project they own and notes on their own corruption clocks. Every proposal waits for a GM to approve it on the board."
+        "hint": "Players may propose a +1 on a project they own and notes on their own corruption clocks. Every proposal waits for a GM to approve it on the board. Note text is kept in the GM-only store; only the pending state is shared."
       }
     },
     "Kind": {
@@ -465,7 +465,8 @@
         "noGM": "No GM is connected to receive the proposal.",
         "timeout": "The GM did not answer in time.",
         "relayUnavailable": "Your proposal could not be sent (user flags are not writable).",
-        "failed": "The proposal failed."
+        "failed": "The proposal failed.",
+        "noChange": "The clock could not move (it may already be complete)."
       }
     }
   }

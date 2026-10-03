@@ -154,6 +154,7 @@ export const MIRROR_ENTRY_PREFIX = "Adventure Clocks: ";
 export const FOLDER_NAME = "Adventure Clocks";
 
 export const FLAG_CLOCKS = "clocks";
+export const FLAG_PROPOSALS = "proposals";
 export const FLAG_MIRROR_FOR = "mirrorFor";
 
 export const APP_IDS = Object.freeze({
