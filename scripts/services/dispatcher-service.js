@@ -6,6 +6,7 @@ import { HOOKS, LIMITS, MODULE_ID } from "../constants.js";
 import { currentUserId, debug, notify, t, warn } from "../compat.js";
 import { annotateClock, applyDelta, completeClock, dismissClock, isComplete, resetClock, setFilled } from "./clock-service.js";
 import { applyTriggerUpdates, evaluate } from "./trigger-service.js";
+import { compareMoments } from "./schedule-service.js";
 import * as store from "./store-service.js";
 
 let chatHandler = null;
@@ -48,6 +49,11 @@ export function runBatch(batch = {}) {
   return store.writeQueue.enqueue(() => runBatchNow(batch));
 }
 
+/** For callers already inside the write queue (the time handler). */
+export function runBatchUnqueued(batch = {}) {
+  return runBatchNow(batch);
+}
+
 async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
   const info = timeInfoProvider() ?? {};
   const ctx = {
@@ -58,6 +64,12 @@ async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
     source: context.source ?? "manual"
   };
   const calendar = context.calendar ?? info.calendar ?? null;
+  // Lets pure clock code ask "is this deadline already behind us?" without a calendar of its own.
+  ctx.isPast = at => {
+    if (!ctx.moment || !at) return false;
+    const cmp = compareMoments(ctx.moment, at, calendar);
+    return Number.isFinite(cmp) && cmp >= 0;
+  };
 
   const byId = new Map(store.getAllClocks().map(c => [c.id, c]));
   const changed = new Map();
@@ -105,14 +117,20 @@ async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
       if (!r.matched.length && !stateChanged) continue;
       let working = { ...clock, triggerState: r.triggerState };
       working = applyTriggerUpdates(working, r.triggerUpdates);
+      const bookkeepingChanged = stateChanged || Object.keys(r.triggerUpdates).length > 0;
       const c = { ...ctx, source: event.source ?? event.type, moment: event.to ?? ctx.moment };
       let res;
       if (r.reset) res = resetClock(working, c);
       else if (r.complete) res = completeClock(working, c);
       else if (r.delta !== 0) res = applyDelta(working, r.delta, c);
       else res = { clock: working, events: [], changed: true };
-      // Bookkeeping-only changes still need saving (carry seconds, re-armed dates).
-      if (!res.changed) res = { clock: working, events: [], changed: true };
+      // Bookkeeping-only changes still need saving (carry seconds, re-armed
+      // dates); a matched trigger that moved nothing and changed nothing is not
+      // written, or a hook trigger on a document hook could feed itself forever.
+      if (!res.changed) {
+        if (!bookkeepingChanged) continue;
+        res = { clock: working, events: [], changed: true };
+      }
       res.depth = depth;
       record(clock.id, res, c.source);
     }

@@ -413,7 +413,15 @@ export function resetClock(input, context = {}) {
   clock.filled = startValue(clock);
   clock.completedAt = null;
   clock.dismissed = false;
+  // Re-arm every trigger, except a one-shot deadline whose date has already
+  // passed: re-arming that would complete the clock again on the next time
+  // step. `context.isPast(at)` is supplied by the dispatcher (this file has no
+  // calendar); without it, or without a current moment, everything re-arms.
+  const pastOneShot = new Set((clock.triggers ?? [])
+    .filter(t => t.type === "date" && !t.repeatEvery && t.at && context.isPast?.(t.at) === true)
+    .map(t => t.id));
   for (const id of Object.keys(clock.triggerState ?? {})) {
+    if (pastOneShot.has(id)) continue;
     clock.triggerState[id] = { ...clock.triggerState[id], fired: false };
   }
   appendLog(clock, makeLogEntry(clock, -(prevFilled - clock.filled) * (clock.direction === "drain" ? -1 : 1), { ...context, note: context.note ?? "reset" }));

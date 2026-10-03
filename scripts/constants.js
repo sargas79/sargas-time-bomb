@@ -100,6 +100,16 @@ export const CURATED_HOOKS = Object.freeze([
   { key: "pauseGame", hook: "pauseGame" }
 ]);
 
+/**
+ * Hooks a `hook` trigger may never name: this module's own writes emit them, so
+ * a trigger on one would feed itself (clock write -> hook -> tick -> write...).
+ */
+export const DENIED_TRIGGER_HOOKS = Object.freeze([
+  "createSetting", "updateSetting", "preUpdateSetting", "preCreateSetting",
+  "createJournalEntry", "updateJournalEntry", "deleteJournalEntry", "preUpdateJournalEntry", "preCreateJournalEntry", "preDeleteJournalEntry",
+  "updateUser", "preUpdateUser"
+]);
+
 /** PF2e hooks this module relies on. Names are verified at runtime against the installed system. */
 export const PF2E_HOOKS = Object.freeze({
   restForTheNight: "pf2e.restForTheNight",

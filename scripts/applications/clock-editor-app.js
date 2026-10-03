@@ -281,6 +281,13 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
         }
         return normalizeTrigger(out, () => randomID());
       });
+      // A deadline the GM moved is a new deadline: forget that the old one fired.
+      for (const tr of d.triggers) {
+        const before = this.#draft.triggers.find(x => x.id === tr.id);
+        if (tr.type === "date" && before?.type === "date" && JSON.stringify(before.at) !== JSON.stringify(tr.at) && d.triggerState?.[tr.id]) {
+          d.triggerState[tr.id] = { ...d.triggerState[tr.id], fired: false, lastFiredAt: null };
+        }
+      }
     }
     if (d.visibility === VISIBILITY.ACTOR_OWNERS && !d.actorUuid) d.visibility = VISIBILITY.GM_ONLY;
     // Keep ids and timestamps; normalise everything else.

@@ -6,6 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- A burst of campaign-time changes (a double-clicked `+1 day`, or catch-up
+  overlapping a settings update) could measure twice from the same "last
+  processed" marker and over-tick elapsed-time clocks. The time handler now
+  reads the marker and computes the span inside the write queue.
+- A free-text hook trigger could name a document hook this module's own writes
+  emit (`updateSetting`, `updateJournalEntry`, `updateUser`) and loop forever.
+  Those names are refused, and a matched trigger that moves nothing and changes
+  no bookkeeping is no longer written.
+- A manual reset no longer re-arms a one-shot deadline whose date has passed,
+  which fired it again on the next time step and completed the clock the GM had
+  just reset.
+- An approved note proposal now shows the note on the player's card instead of
+  an empty card.
+
 ## [1.2.0] - 2026-10-03
 
 ### Added

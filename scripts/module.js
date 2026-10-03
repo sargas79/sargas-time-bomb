@@ -36,7 +36,17 @@ function momentKey(m) {
  * Elapsed time is measured from the stored "last processed" marker, never from
  * the previous hook payload, so bursts and missed events cannot lose time.
  */
-async function onTimeChange({ moment, worldTime, source, reconfigured = false, reason = null, adventureDayOnly = false }, { catchUp = false } = {}) {
+/**
+ * Runs inside the write queue: the "last processed" marker is read and the
+ * elapsed span computed only once every earlier batch has written, so a burst
+ * of time changes cannot measure twice from the same marker.
+ */
+function onTimeChange(change, options = {}) {
+  if (!dispatcher.isPrimaryGM()) return Promise.resolve(null);
+  return store.writeQueue.enqueue(() => onTimeChangeNow(change, options));
+}
+
+async function onTimeChangeNow({ moment, worldTime, source, reconfigured = false, reason = null, adventureDayOnly = false }, { catchUp = false } = {}) {
   if (!dispatcher.isPrimaryGM()) return null;
   if (source === "off") return null; // time triggers disabled by setting
   const info = timeInfo();
@@ -44,7 +54,7 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false, r
 
   // The reason for an already-processed move arrived late: count the rest only.
   if (adventureDayOnly) {
-    return dispatcher.runBatch({ events: [{ type: "rest", actors: [], source: "adventureDay" }], context: { moment, worldTime, source: "rest" } });
+    return dispatcher.runBatchUnqueued({ events: [{ type: "rest", actors: [], source: "adventureDay" }], context: { moment, worldTime, source: "rest" } });
   }
   const state = store.getState();
   const stamp = { lastProcessedMoment: moment ?? state.lastProcessedMoment ?? null, lastProcessedWorldTime: worldTime ?? state.lastProcessedWorldTime ?? null };
@@ -52,7 +62,7 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false, r
   if (source === TTA_ID) {
     if (!moment) return null;
     const from = state.lastProcessedMoment;
-    if (!from) { await store.saveState(stamp); return null; }
+    if (!from) { await store.saveStateUnqueued(stamp); return null; }
     // One arithmetic for both ends (TTA's own when it exposes it) so a mixed sum cannot fake a rewind.
     const span = info.elapsedBetween(from, moment);
     const seconds = Number.isFinite(span) ? span : elapsedSeconds(from, moment, info.calendar);
@@ -64,14 +74,14 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false, r
         notify("warn", t("Notify.rewind", { from: formatMoment(from), to: formatMoment(moment) }));
         stamp.lastRewindNoticeAt = key;
       }
-      await store.saveState(stamp);
+      await store.saveStateUnqueued(stamp);
       rerenderModuleApps();
       return null;
     }
     const events = [{ type: "time", seconds, from, to: moment, calendar: info.calendar, source: catchUp ? "catchup" : "time" }];
     // TTA's "next adventure day" is the party waking up; rest triggers that opt in count it.
     if (reason === "nextAdventureDay") events.push({ type: "rest", actors: [], source: "adventureDay" });
-    return dispatcher.runBatch({
+    return dispatcher.runBatchUnqueued({
       events,
       context: { moment, worldTime, source: catchUp ? "catchup" : "time", state: stamp, calendar: info.calendar }
     });
@@ -80,7 +90,7 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false, r
   // World time.
   if (!Number.isFinite(worldTime)) return null;
   const from = state.lastProcessedWorldTime;
-  if (!Number.isFinite(from)) { await store.saveState(stamp); return null; }
+  if (!Number.isFinite(from)) { await store.saveStateUnqueued(stamp); return null; }
   const seconds = worldTime - from;
   if (seconds === 0) return null;
   if (seconds < 0) {
@@ -89,10 +99,10 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false, r
       notify("warn", t("Notify.rewindWorldTime"));
       stamp.lastRewindNoticeAt = key;
     }
-    await store.saveState(stamp);
+    await store.saveStateUnqueued(stamp);
     return null;
   }
-  return dispatcher.runBatch({
+  return dispatcher.runBatchUnqueued({
     events: [{ type: "time", seconds, from: null, to: null, calendar: null, source: catchUp ? "catchup" : "time" }],
     context: { worldTime, source: catchUp ? "catchup" : "time", state: stamp }
   });

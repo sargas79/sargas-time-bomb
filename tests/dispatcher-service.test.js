@@ -111,6 +111,39 @@ test("concurrent batches serialise: two quick +1 clicks are both applied", async
   } finally { stub.uninstall(); }
 });
 
+test("a matched trigger that moves nothing and changes no bookkeeping is not written", async () => {
+  const stub = installFoundryStub(stubOpts);
+  try {
+    const { store, dispatcher } = await load();
+    const full = createClock({ kind: "progress", name: "Full", visibility: "players", segments: 2, filled: 2, triggers: [{ id: "h", type: "hook", advance: 1, hook: "pauseGame" }] });
+    await store.writeBatch({ upsert: [full] });
+    stub.settingWrites.length = 0;
+    const r = await dispatcher.dispatch({ type: "hook", hook: "pauseGame" });
+    assert.equal(r.changed.length, 0);
+    assert.equal(stub.settingWrites.filter(w => w.key === `${MODULE_ID}.clocks`).length, 0, "no write, so no self-feeding loop");
+  } finally { stub.uninstall(); }
+});
+
+test("manual reset through the dispatcher keeps a past deadline fired and re-arms a future one", async () => {
+  const stub = installFoundryStub(stubOpts);
+  try {
+    const { store, dispatcher } = await load();
+    const CAL = { monthLengths: [30], monthBase: 1 };
+    dispatcher.configure({ timeInfo: () => ({ moment: { year: 1, month: 1, day: 10, hour: 0, minute: 0 }, worldTime: 0, calendar: CAL }) });
+    const clock = createClock({ kind: "countdown", name: "D", visibility: "players", segments: 4, triggers: [
+      { id: "past", type: "date", at: { year: 1, month: 1, day: 5 } },
+      { id: "ahead", type: "date", at: { year: 1, month: 1, day: 20 } }
+    ] });
+    clock.triggerState.past.fired = true; clock.triggerState.ahead.fired = true;
+    await store.writeBatch({ upsert: [clock] });
+    await dispatcher.manual(clock.id, "reset");
+    const after = store.getClock(clock.id);
+    assert.equal(after.triggerState.past.fired, true);
+    assert.equal(after.triggerState.ahead.fired, false);
+    dispatcher.configure({ timeInfo: () => ({ moment: null, worldTime: null, calendar: null }) });
+  } finally { stub.uninstall(); }
+});
+
 test("rival faction clocks: completion resets the rival", async () => {
   const stub = installFoundryStub(stubOpts);
   try {

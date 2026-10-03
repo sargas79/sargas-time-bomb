@@ -182,10 +182,13 @@ async function performWrite({ upsert = [], remove = [], state = null } = {}) {
 }
 
 export function saveState(partial) {
-  return writeQueue.enqueue(async () => {
-    const merged = { ...getState(), ...partial };
-    return setSetting(SETTINGS.state, merged);
-  });
+  return writeQueue.enqueue(() => saveStateUnqueued(partial));
+}
+
+/** For callers already inside the write queue. */
+export function saveStateUnqueued(partial) {
+  const merged = { ...getState(), ...partial };
+  return setSetting(SETTINGS.state, merged);
 }
 
 /* ------------------------------------------------------------------ */
