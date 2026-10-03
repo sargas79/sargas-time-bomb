@@ -46,6 +46,7 @@ test("trigger shapes", () => {
   assert.ok(validateTrigger({ type: "date", advance: "complete" }, 0).some(e => e.code === "triggerDateMissing"));
   assert.ok(validateTrigger({ type: "date", advance: "complete", at: { year: 1, month: 13, day: 1 } }, 0, { calendar: { monthLengths: [30, 30] } }).some(e => e.code === "triggerDateInvalid"));
   assert.ok(validateTrigger({ type: "hook", advance: 1, hook: "bad hook()" }, 0).some(e => e.code === "triggerHook"));
+  assert.ok(validateTrigger({ type: "hook", advance: 1, hook: "sargas-time-bomb.clockAdvanced" }, 0).some(e => e.code === "triggerHookSelf"));
   assert.ok(validateTrigger({ type: "rest", advance: 0 }, 0).some(e => e.code === "triggerAdvance"));
   assert.ok(validateTrigger({ type: "rest", advance: 1000 }, 0).some(e => e.code === "triggerAdvance"));
   assert.ok(validateTrigger({ type: "nope", advance: 1 }, 0).some(e => e.code === "triggerType"));

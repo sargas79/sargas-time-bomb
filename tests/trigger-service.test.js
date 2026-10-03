@@ -67,8 +67,9 @@ test("date trigger fires once when the moment is reached, then re-arms when repe
   assert.equal(r.complete, false, "already fired");
 
   let rep = mk([{ id: "d", type: "date", advance: 1, at, repeatEvery: { days: 1 } }]);
-  r = evaluate(rep, { type: "time", seconds: DAY, to: { year: 1, month: 2, day: 3, hour: 8, minute: 0 }, calendar: CAL });
-  assert.equal(r.delta, 1);
+  // Due on day 1; from day 2 08:00 to day 3 08:00 only day 3's occurrence is new -> 2 in total.
+  r = evaluate(rep, { type: "time", seconds: DAY, from: { year: 1, month: 2, day: 2, hour: 8, minute: 0 }, to: { year: 1, month: 2, day: 3, hour: 8, minute: 0 }, calendar: CAL });
+  assert.equal(r.delta, 2);
   assert.deepEqual(r.triggerUpdates.d.at, { year: 1, month: 2, day: 4, hour: 7, minute: 0 });
   rep = applyTriggerUpdates({ ...rep, triggerState: r.triggerState }, r.triggerUpdates);
   assert.deepEqual(rep.triggers[0].at, { year: 1, month: 2, day: 4, hour: 7, minute: 0 });
@@ -95,6 +96,26 @@ test("linked trigger matches target clock and when", () => {
   const th = mk([{ id: "l", type: "linked", advance: 1, clockId: "rival", when: "threshold", at: 4 }]);
   assert.equal(evaluate(th, { type: "linked", clockId: "rival", when: "threshold", at: 2 }).delta, 0);
   assert.equal(evaluate(th, { type: "linked", clockId: "rival", when: "threshold", at: 4 }).delta, 1);
+});
+
+test("linked trigger with any threshold matches every threshold", () => {
+  const any = normalizeClock({ kind: "progress", segments: 8, triggers: [{ id: "l", type: "linked", advance: 1, clockId: "rival", when: "threshold", at: null }] });
+  assert.equal(any.triggers[0].at, null);
+  assert.equal(evaluate(any, { type: "linked", clockId: "rival", when: "threshold", at: 2 }).delta, 1);
+  assert.equal(evaluate(any, { type: "linked", clockId: "rival", when: "threshold", at: 6 }).delta, 1);
+});
+
+test("repeating date trigger counts every occurrence inside a long step", () => {
+  const at = { year: 1, month: 1, day: 2, hour: 7, minute: 0 };
+  const rep = mk([{ id: "d", type: "date", advance: 1, at, repeatEvery: { days: 1 } }]);
+  // From day 1 to day 5: due day 2, then days 3, 4, 5 -> 4 occurrences; re-armed at day 6.
+  const r = evaluate(rep, { type: "time", seconds: 4 * DAY, from: { year: 1, month: 1, day: 1, hour: 7, minute: 0 }, to: { year: 1, month: 1, day: 5, hour: 7, minute: 0 }, calendar: CAL });
+  assert.equal(r.delta, 4);
+  assert.deepEqual(r.triggerUpdates.d.at, { year: 1, month: 1, day: 6, hour: 7, minute: 0 });
+  // A long-overdue first occurrence fires once, not once per missed period before `from`.
+  const stale = mk([{ id: "d", type: "date", advance: 1, at: { year: 1, month: 1, day: 1, hour: 0, minute: 0 }, repeatEvery: { hours: 1 } }]);
+  const r2 = evaluate(stale, { type: "time", seconds: 3600, from: { year: 1, month: 1, day: 10, hour: 0, minute: 0 }, to: { year: 1, month: 1, day: 10, hour: 1, minute: 0 }, calendar: CAL });
+  assert.equal(r2.delta, 2);
 });
 
 test("checkLinkChain detects cycles and depth", () => {

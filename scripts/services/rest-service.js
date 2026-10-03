@@ -3,7 +3,7 @@
  * per actor after Rest for the Night completes, plus the module's own
  * "Declare rest" path. Per-actor hooks are debounced into one rest.
  */
-import { HOOKS, PF2E_HOOKS, SETTINGS, SYSTEM_ID } from "../constants.js";
+import { HOOKS, MODULE_ID, PF2E_HOOKS, SETTINGS, SYSTEM_ID } from "../constants.js";
 import { debug, getSetting, warn } from "../compat.js";
 
 let registered = [];
@@ -11,6 +11,8 @@ let pending = null;
 let timer = null;
 let onRest = null;
 let warnedShape = false;
+const FLAG_RELAY = "restRelay";
+const seenRelays = new Set();
 
 function debounceMs() {
   let s = 5;
@@ -30,11 +32,35 @@ function collect(actor, source) {
 
 function flush() {
   if (!pending) return;
-  const payload = { actors: [...pending.actors], source: [...pending.sources].join("+") };
+  const payload = { actors: [...pending.actors], source: [...pending.sources].join("+"), nonce: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, from: globalThis.game?.user?.id ?? null };
   pending = null;
   timer = null;
   debug("rest", payload);
   globalThis.Hooks.callAll(HOOKS.rest, payload);
+}
+
+/**
+ * `pf2e.restForTheNight` fires only on the client that rested, which is often a
+ * player's. Any client may write its own User document, so a non-primary client
+ * relays the rest through a flag on its user; the primary GM reads it.
+ */
+export async function relayRest(payload) {
+  const user = globalThis.game?.user;
+  if (!user?.setFlag) return;
+  try { await user.setFlag(MODULE_ID, FLAG_RELAY, { ...payload, at: Date.now() }); }
+  catch (e) { warn("rest relay failed", e); }
+}
+
+/** Primary GM side: turn relayed flags into rest payloads. */
+export function startRestRelayListener(handler) {
+  on("updateUser", (user, changes) => {
+    const relay = changes?.flags?.[MODULE_ID]?.[FLAG_RELAY];
+    if (!relay || !relay.nonce || seenRelays.has(relay.nonce)) return;
+    seenRelays.add(relay.nonce);
+    if (seenRelays.size > 200) seenRelays.delete(seenRelays.values().next().value);
+    const actors = Array.isArray(relay.actors) ? relay.actors.filter(a => typeof a === "string") : [];
+    handler({ actors, source: `${relay.source ?? "relay"}@${user.name ?? user.id}`, relayed: true, nonce: relay.nonce });
+  });
 }
 
 function on(name, fn) {

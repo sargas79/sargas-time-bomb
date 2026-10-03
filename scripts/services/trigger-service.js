@@ -12,7 +12,7 @@
  * Result: { delta, complete, reset, matched: [triggerId], triggerState, triggerUpdates }
  */
 import { LIMITS } from "../constants.js";
-import { bucketElapsed, compareMoments, everyToSeconds, nextOccurrence } from "./schedule-service.js";
+import { addSeconds, bucketElapsed, compareMoments, everyToSeconds } from "./schedule-service.js";
 
 function emptyResult(clock) {
   return {
@@ -101,16 +101,31 @@ export function evaluate(clock, event) {
         if (state.fired && !trigger.repeatEvery) break;
         const cmp = compareMoments(event.to, trigger.at, event.calendar);
         if (Number.isNaN(cmp) || cmp < 0) break;
-        applyAdvance(result, trigger);
-        state.fired = true;
-        state.lastFiredAt = event.to;
-        result.matched.push(trigger.id);
-        if (trigger.repeatEvery) {
-          const next = nextOccurrence(trigger.at, trigger.repeatEvery, event.to, event.calendar);
-          if (next) {
-            result.triggerUpdates[trigger.id] = { at: next };
-            state.fired = false;
-          }
+        if (!trigger.repeatEvery) {
+          applyAdvance(result, trigger);
+          state.fired = true;
+          state.lastFiredAt = event.to;
+          result.matched.push(trigger.id);
+          break;
+        }
+        // Repeating: the due occurrence fires, plus every further occurrence
+        // that fell inside (from, to], so a long step cannot skip periods.
+        const period = everyToSeconds(trigger.repeatEvery, event.calendar);
+        if (!(period > 0)) break;
+        let at = trigger.at;
+        let count = 0;
+        let guard = 0;
+        while (guard++ < 10000 && compareMoments(event.to, at, event.calendar) >= 0) {
+          const afterFrom = !event.from || compareMoments(at, event.from, event.calendar) > 0;
+          if (count === 0 || afterFrom) count++;
+          at = addSeconds(at, period, event.calendar);
+        }
+        if (count > 0) {
+          applyAdvance(result, trigger, count);
+          state.fired = false;
+          state.lastFiredAt = event.to;
+          result.matched.push(trigger.id);
+          result.triggerUpdates[trigger.id] = { at };
         }
         break;
       }

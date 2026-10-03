@@ -160,6 +160,7 @@ export async function syncHookListeners() {
     for (const tr of c.triggers ?? []) if (tr.type === "hook" && tr.hook) names.add(tr.hook);
   }
   for (const name of names) {
+    if (name.startsWith(`${MODULE_ID}.`)) { names.delete(name); continue; } // never feed our own hooks back in
     if (hookListeners.has(name)) continue;
     const id = Hooks.on(name, (...args) => onHookEvent(name, args));
     hookListeners.set(name, id);

@@ -116,6 +116,11 @@ export function writeBatch(changes) {
   return writeQueue.enqueue(() => performWrite(changes));
 }
 
+/** Same as writeBatch but for callers already running inside the queue. */
+export function writeBatchUnqueued(changes) {
+  return performWrite(changes);
+}
+
 async function performWrite({ upsert = [], remove = [], state = null } = {}) {
   if (!game().user?.isGM) throw new Error(`${MODULE_ID}: only a GM may write clocks`);
   const current = getAllClocks();

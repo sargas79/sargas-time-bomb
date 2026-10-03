@@ -42,7 +42,13 @@ function sameState(a, b) {
  * events: trigger events (see trigger-service)
  * context: { source, userId, moment, worldTime, now, state }
  */
-export async function runBatch({ ops = [], events = [], context = {} } = {}) {
+export function runBatch(batch = {}) {
+  // Read, evaluate and write inside the queue so two batches cannot start
+  // from the same stale snapshot and overwrite each other.
+  return store.writeQueue.enqueue(() => runBatchNow(batch));
+}
+
+async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
   const info = timeInfoProvider() ?? {};
   const ctx = {
     now: context.now ?? new Date().toISOString(),
@@ -112,7 +118,7 @@ export async function runBatch({ ops = [], events = [], context = {} } = {}) {
   }
 
   if (changed.size || context.state) {
-    await store.writeBatch({ upsert: [...changed.values()], state: context.state ?? null });
+    await store.writeBatchUnqueued({ upsert: [...changed.values()], state: context.state ?? null });
   }
 
   // Side effects after the write.

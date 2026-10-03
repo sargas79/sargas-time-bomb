@@ -100,6 +100,17 @@ test("linked chains propagate within one batch and stop at depth 5", async () =>
   } finally { stub.uninstall(); }
 });
 
+test("concurrent batches serialise: two quick +1 clicks are both applied", async () => {
+  const stub = installFoundryStub(stubOpts);
+  try {
+    const { store, dispatcher } = await load();
+    const clock = createClock({ kind: "progress", name: "Race", visibility: "players", segments: 8 });
+    await store.writeBatch({ upsert: [clock] });
+    await Promise.all([dispatcher.manual(clock.id, "delta", 1), dispatcher.manual(clock.id, "delta", 1)]);
+    assert.equal(store.getClock(clock.id).filled, 2);
+  } finally { stub.uninstall(); }
+});
+
 test("rival faction clocks: completion resets the rival", async () => {
   const stub = installFoundryStub(stubOpts);
   try {

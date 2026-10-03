@@ -9,7 +9,7 @@ import * as dispatcher from "./services/dispatcher-service.js";
 import * as store from "./services/store-service.js";
 import { elapsedSeconds } from "./services/schedule-service.js";
 import { postCards } from "./services/chat-service.js";
-import { startRestService } from "./services/rest-service.js";
+import { relayRest, startRestRelayListener, startRestService } from "./services/rest-service.js";
 import { formatMoment, startTimeSource, timeInfo } from "./services/time-source-service.js";
 import { renderPie } from "./ui/pie.js";
 import { BoardMenu } from "./applications/board-app.js";
@@ -37,7 +37,9 @@ function momentKey(m) {
  */
 async function onTimeChange({ moment, worldTime, source, reconfigured = false }, { catchUp = false } = {}) {
   if (!dispatcher.isPrimaryGM()) return null;
+  if (source === "off") return null; // time triggers disabled by setting
   const info = timeInfo();
+  if (info.sourceId === "off") return null;
   const state = store.getState();
   const stamp = { lastProcessedMoment: moment ?? state.lastProcessedMoment ?? null, lastProcessedWorldTime: worldTime ?? state.lastProcessedWorldTime ?? null };
 
@@ -133,9 +135,19 @@ Hooks.once("ready", async () => {
 
   registerSceneHooks();
   startRestService(payload => {
-    // Declared rests run on the declaring GM's client; PF2e rests on the primary GM.
-    const local = payload.source === "declared" && payload.declaredBy === game.user.id;
-    dispatcher.dispatch({ type: "rest", actors: payload.actors }, { local });
+    // Declared rests run on the declaring GM's client. PF2e rests fire only on
+    // the resting client: the primary GM processes them directly, every other
+    // client relays them through its User flag.
+    if (payload.source === "declared") {
+      dispatcher.dispatch({ type: "rest", actors: payload.actors }, { local: payload.declaredBy === game.user.id });
+      return;
+    }
+    if (dispatcher.isPrimaryGM()) dispatcher.dispatch({ type: "rest", actors: payload.actors });
+    else relayRest(payload);
+  });
+  startRestRelayListener(payload => {
+    if (!dispatcher.isPrimaryGM()) return;
+    dispatcher.dispatch({ type: "rest", actors: payload.actors });
   });
   startTimeSource(change => onTimeChange(change));
 

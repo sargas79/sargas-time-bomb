@@ -97,7 +97,7 @@ export function normalizeTrigger(raw, idGen = fallbackId) {
     case "linked":
       t.clockId = typeof raw.clockId === "string" ? raw.clockId : "";
       t.when = raw.when === "threshold" ? "threshold" : "completed";
-      t.at = raw.when === "threshold" && Number.isFinite(Number(raw.at)) ? Number(raw.at) : null;
+      t.at = raw.when === "threshold" && raw.at !== null && raw.at !== undefined && raw.at !== "" && Number.isFinite(Number(raw.at)) ? Number(raw.at) : null;
       break;
     default:
       break;

@@ -386,7 +386,8 @@
       "alarmSegments": "An alarm has exactly one segment.",
       "repeatAtFull": "A repeating clock cannot rest at its complete value; it wraps to the start.",
       "segmentLabelsCount": "Segment labels must be empty or exactly one per segment ({segments}).",
-      "thresholdEffect": "A threshold's effect link is not a valid UUID."
+      "thresholdEffect": "A threshold's effect link is not a valid UUID.",
+      "triggerHookSelf": "A hook trigger cannot listen to this module's own hooks."
     }
   }
 }
