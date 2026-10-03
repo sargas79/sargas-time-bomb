@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-03
+
 ### Fixed
 - A burst of campaign-time changes (a double-clicked `+1 day`, or catch-up
   overlapping a settings update) could measure twice from the same "last
