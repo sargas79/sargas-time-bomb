@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Rest triggers may opt in to Through the Ages' **Next adventure day** (its
+  `timeChanged` reason, TTA 2.2+), so a project ticks when the party wakes
+  even without Rest for the Night.
+- After a structural calendar change (`calendarConfigured` with
+  `structureChanged`), one GM warning names the clocks whose deadlines no
+  longer exist.
+
+### Changed
+- Elapsed campaign time is measured with TTA's `campaignSeconds` when
+  available, falling back to the local sum; the month-base guessing is gone
+  (TTA dates are 1-based).
+
 ## [1.1.0] - 2026-10-03
 
 ### Added

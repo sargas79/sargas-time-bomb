@@ -7,7 +7,7 @@ import { registerSettings } from "./settings.js";
 import { buildAPI } from "./api.js";
 import * as dispatcher from "./services/dispatcher-service.js";
 import * as store from "./services/store-service.js";
-import { elapsedSeconds } from "./services/schedule-service.js";
+import { elapsedSeconds, isValidMoment } from "./services/schedule-service.js";
 import { postCards } from "./services/chat-service.js";
 import { relayRest, startRestRelayListener, startRestService } from "./services/rest-service.js";
 import { formatMoment, startTimeSource, timeInfo } from "./services/time-source-service.js";
@@ -36,7 +36,7 @@ function momentKey(m) {
  * Elapsed time is measured from the stored "last processed" marker, never from
  * the previous hook payload, so bursts and missed events cannot lose time.
  */
-async function onTimeChange({ moment, worldTime, source, reconfigured = false }, { catchUp = false } = {}) {
+async function onTimeChange({ moment, worldTime, source, reconfigured = false, structureChanged = false, reason = null }, { catchUp = false } = {}) {
   if (!dispatcher.isPrimaryGM()) return null;
   if (source === "off") return null; // time triggers disabled by setting
   const info = timeInfo();
@@ -48,11 +48,14 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false },
     if (!moment) return null;
     const from = state.lastProcessedMoment;
     if (!from) { await store.saveState(stamp); return null; }
-    const seconds = elapsedSeconds(from, moment, info.calendar);
-    if (seconds === 0) {
-      if (reconfigured) rerenderModuleApps();
-      return null;
+    // Prefer TTA's own arithmetic (2.2+) so a deadline and an elapsed step agree with the calendar exactly.
+    const a = info.momentToSeconds(from), b = info.momentToSeconds(moment);
+    const seconds = Number.isFinite(a) && Number.isFinite(b) ? b - a : elapsedSeconds(from, moment, info.calendar);
+    if (reconfigured) {
+      rerenderModuleApps();
+      if (structureChanged) await reportInvalidDeadlines(info);
     }
+    if (seconds === 0) return null;
     if (seconds < 0) {
       const key = momentKey(moment);
       if (state.lastRewindNoticeAt !== key) {
@@ -63,8 +66,11 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false },
       rerenderModuleApps();
       return null;
     }
+    const events = [{ type: "time", seconds, from, to: moment, calendar: info.calendar, source: catchUp ? "catchup" : "time" }];
+    // TTA's "next adventure day" is the party waking up; rest triggers that opt in count it.
+    if (reason === "nextAdventureDay") events.push({ type: "rest", actors: [], source: "adventureDay" });
     return dispatcher.runBatch({
-      events: [{ type: "time", seconds, from, to: moment, calendar: info.calendar, source: catchUp ? "catchup" : "time" }],
+      events,
       context: { moment, worldTime, source: catchUp ? "catchup" : "time", state: stamp, calendar: info.calendar }
     });
   }
@@ -88,6 +94,14 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false },
     events: [{ type: "time", seconds, from: null, to: null, calendar: null, source: catchUp ? "catchup" : "time" }],
     context: { worldTime, source: catchUp ? "catchup" : "time", state: stamp }
   });
+}
+
+/** After a structural calendar change, name the clocks whose stored deadlines no longer exist. */
+async function reportInvalidDeadlines(info) {
+  if (!info.calendar) return;
+  const bad = store.getAllClocks().filter(c => c.triggers?.some(tr => tr.type === "date" && tr.at && !isValidMoment(tr.at, info.calendar)));
+  if (!bad.length) return;
+  notify("warn", t("Notify.deadlinesInvalid", { n: bad.length, names: bad.map(c => c.name).join(", ") }), { permanent: true });
 }
 
 async function evaluateNow() {
