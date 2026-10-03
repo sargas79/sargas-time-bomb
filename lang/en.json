@@ -53,6 +53,10 @@
       "debugLogging": {
         "name": "Debug logging",
         "hint": "Write verbose diagnostics to the console on this client."
+      },
+      "allowProposals": {
+        "name": "Allow player proposals",
+        "hint": "Players may propose a +1 on a project they own and notes on their own corruption clocks. Every proposal waits for a GM to approve it on the board."
       }
     },
     "Kind": {
@@ -155,7 +159,8 @@
       "import": "import",
       "catchup": "catch-up",
       "declared": "declared rest",
-      "api": "API"
+      "api": "API",
+      "proposal": "approved proposal"
     },
     "Trigger": {
       "sceneAny": "{adv} on any scene change",
@@ -415,6 +420,53 @@
       "triggerHookSelf": "A hook trigger cannot listen to this module's own hooks.",
       "factionGroup": "A faction clock needs a group (the faction name).",
       "actorType": "The bound actor is a {type}; only characters, NPCs and familiars can carry a clock."
+    },
+    "Proposal": {
+      "queue": "{n} pending proposal(s)",
+      "pending": "{n} pending",
+      "proposeAdvance": "Propose +1",
+      "proposeNote": "Propose note",
+      "noteTitle": "Propose a note",
+      "noteLabel": "Note for the GM (added to the clock's log if approved)",
+      "send": "Send",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectTitle": "Reject proposal",
+      "rejectReason": "Reason (optional, sent to the player)",
+      "describeAdvance": "{delta} on “{clock}”",
+      "describeNote": "a note on “{clock}”",
+      "Log": {
+        "approved": "proposed by {user}"
+      },
+      "Notify": {
+        "received": "{user} proposed a change to “{clock}”.",
+        "sent": "Proposal sent to the GM.",
+        "approvedTitle": "Proposal approved",
+        "rejectedTitle": "Proposal rejected"
+      },
+      "Error": {
+        "noClock": "That clock no longer exists.",
+        "gmProposes": "GMs change clocks directly.",
+        "payload": "Malformed proposal.",
+        "notProject": "Only project clocks take proposed progress.",
+        "notOwner": "You do not own this clock.",
+        "delta": "A proposal moves a clock by one segment.",
+        "notCorruption": "Only corruption clocks take proposed notes.",
+        "notActorBound": "This clock is not bound to an actor.",
+        "notActorOwner": "You do not own this clock's actor.",
+        "emptyNote": "The note is empty.",
+        "noteLength": "The note is too long.",
+        "operation": "Unknown proposal type.",
+        "disabled": "The GM has not enabled proposals.",
+        "inactive": "The proposing user is not connected.",
+        "queueFull": "The proposal queue is full.",
+        "tooMany": "You have too many pending proposals.",
+        "duplicate": "You already have a pending proposal on this clock.",
+        "noGM": "No GM is connected to receive the proposal.",
+        "timeout": "The GM did not answer in time.",
+        "relayUnavailable": "Your proposal could not be sent (user flags are not writable).",
+        "failed": "The proposal failed."
+      }
     }
   }
 }

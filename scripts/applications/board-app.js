@@ -7,6 +7,7 @@ import { enrich } from "../compat.js";
 import { getDialogV2, getSetting, isGM, moduleVersion, notify, randomID, rerenderModuleApps, t } from "../compat.js";
 import { createClock, isComplete, lastChange, nextLabel, reachedThreshold } from "../services/clock-service.js";
 import { validateClock } from "../services/validation-service.js";
+import * as proposals from "../services/proposal-service.js";
 import { everyText } from "../ui/describe.js";
 import * as dispatcher from "../services/dispatcher-service.js";
 import { exportEnvelope, parseImport } from "../services/portability-service.js";
@@ -53,7 +54,11 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleCompleted: BoardApp.#onToggleCompleted,
       openActor: BoardApp.#onOpenActor,
       setState: BoardApp.#onSetState,
-      createRacingPair: BoardApp.#onCreateRacingPair
+      createRacingPair: BoardApp.#onCreateRacingPair,
+      proposeAdvance: BoardApp.#onProposeAdvance,
+      proposeNote: BoardApp.#onProposeNote,
+      approveProposal: BoardApp.#onApproveProposal,
+      rejectProposal: BoardApp.#onRejectProposal
     }
   };
 
@@ -132,7 +137,16 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ttaMissing: !TTASource.isActive
       },
       isPrimaryGM: dispatcher.isPrimaryGM(),
-      primaryGMName: globalThis.game.users.get(dispatcher.primaryGMId() ?? "")?.name ?? null
+      primaryGMName: globalThis.game.users.get(dispatcher.primaryGMId() ?? "")?.name ?? null,
+      proposalsEnabled: proposals.proposalsEnabled(),
+      pendingProposals: gm ? proposals.getProposals().map(p => ({
+        ...p,
+        text: p.text ?? null,
+        description: p.operation === proposals.PROPOSAL_OPS.ADVANCE
+          ? t("Proposal.describeAdvance", { delta: p.delta > 0 ? `+${p.delta}` : p.delta, clock: p.clockName })
+          : t("Proposal.describeNote", { clock: p.clockName }),
+        when: new Date(p.at).toLocaleString()
+      })) : []
     };
   }
 
@@ -148,7 +162,12 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
       user: last.userId ? (globalThis.game.users.get(last.userId)?.name ?? "—") : "—"
     }) : null;
     const owner = clock.ownerUserId ? globalThis.game.users.get(clock.ownerUserId) : null;
+    const canPropose = gm ? { advance: false, note: false } : proposals.proposalOptions(clock);
+    const mine = proposals.proposalsFor(clock.id).filter(p => gm || p.userId === globalThis.game.user.id);
     return {
+      canProposeAdvance: canPropose.advance,
+      canProposeNote: canPropose.note,
+      pendingCount: mine.length,
       effectLink,
       thresholdNote: threshold?.note || null,
       lastChangeText,
@@ -400,6 +419,50 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const uuid = target.closest("[data-actor-uuid]")?.dataset.actorUuid;
     const actor = store.resolveActor(uuid);
     actor?.sheet?.render(true);
+  }
+
+  static async #onProposeAdvance(event, target) {
+    const id = BoardApp.#clockId(target);
+    await proposals.propose(proposals.PROPOSAL_OPS.ADVANCE, { clockId: id, delta: 1 }, { isPrimary: () => dispatcher.isPrimaryGM() });
+    this.render();
+  }
+
+  static async #onProposeNote(event, target) {
+    const id = BoardApp.#clockId(target);
+    const Dialog = getDialogV2();
+    if (!Dialog) return;
+    const text = await Dialog.prompt({
+      window: { title: t("Proposal.noteTitle") },
+      content: `<div class="stb form-group"><label>${t("Proposal.noteLabel")}</label><textarea name="text" rows="4" maxlength="${proposals.PROPOSAL_LIMITS.NOTE_MAX}" autofocus></textarea></div>`,
+      ok: { label: t("Proposal.send"), callback: (ev, button) => button.form.elements.text.value },
+      rejectClose: false,
+      modal: true
+    });
+    if (!text?.trim()) return;
+    await proposals.propose(proposals.PROPOSAL_OPS.NOTE, { clockId: id, text }, { isPrimary: () => dispatcher.isPrimaryGM() });
+    this.render();
+  }
+
+  static async #onApproveProposal(event, target) {
+    if (!isGM()) return;
+    await proposals.approveProposal(target.dataset.proposalId, { dispatcher });
+  }
+
+  static async #onRejectProposal(event, target) {
+    if (!isGM()) return;
+    const Dialog = getDialogV2();
+    let reason = "";
+    if (Dialog) {
+      reason = await Dialog.prompt({
+        window: { title: t("Proposal.rejectTitle") },
+        content: `<div class="stb form-group"><label>${t("Proposal.rejectReason")}</label><input type="text" name="reason" autofocus></div>`,
+        ok: { label: t("Proposal.reject"), callback: (ev, button) => button.form.elements.reason.value },
+        rejectClose: false,
+        modal: true
+      });
+      if (reason === null || reason === undefined) return;
+    }
+    await proposals.rejectProposal(target.dataset.proposalId, reason);
   }
 
   /** Pick a labelled state by name (weather fronts and other labelled clocks). */

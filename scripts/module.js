@@ -15,6 +15,7 @@ import { renderPie } from "./ui/pie.js";
 import { BoardMenu } from "./applications/board-app.js";
 import { HooksApp } from "./applications/hooks-app.js";
 import { registerDocumentHooks, registerSceneHooks, registerSidebarButton, refreshSidebarButton, syncHookListeners } from "./hooks.js";
+import { startProposalService } from "./services/proposal-service.js";
 
 const TEMPLATES = [
   "board", "clock-editor", "hooks",
@@ -150,6 +151,8 @@ Hooks.once("ready", async () => {
     dispatcher.dispatch({ type: "rest", actors: payload.actors });
   });
   startTimeSource(change => onTimeChange(change));
+  try { startProposalService({ isPrimary: () => dispatcher.isPrimaryGM() }); }
+  catch (e) { warn("proposal relay failed to start", e); }
 
   if (isGM()) {
     await syncHookListeners();

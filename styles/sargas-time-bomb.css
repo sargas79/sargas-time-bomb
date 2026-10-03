@@ -180,3 +180,15 @@
 
 .stb-card__last { font-size: 0.78em; color: var(--stb-muted); }
 .stb-card__warning { font-size: 0.85em; color: var(--stb-danger); }
+
+/* ---------- Proposals (1.1) ---------- */
+.stb-proposals { padding: 0.4em 0.7em; border-bottom: 1px solid var(--stb-border); background: color-mix(in srgb, var(--stb-accent) 8%, transparent); }
+.stb-proposals__header { margin: 0 0 0.3em; font-size: 0.95em; border: none; }
+.stb-proposals__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25em; }
+.stb-proposals__item { display: flex; align-items: center; gap: 0.5em; font-size: 0.9em; }
+.stb-proposals__who { font-weight: 600; flex: 0 0 auto; }
+.stb-proposals__what { flex: 1 1 auto; min-width: 0; }
+.stb-proposals__when { color: var(--stb-muted); font-size: 0.85em; flex: 0 0 auto; }
+.stb-proposals__item button { width: 1.9em; height: 1.9em; padding: 0; line-height: 1; flex: 0 0 auto; }
+.stb-card__pending { color: var(--stb-accent); }
+.stb-card__controls button[data-action^="propose"] { width: auto; padding: 0 0.6em; }
