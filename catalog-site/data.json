@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-10-03T14:55:59.041Z",
+  "owner": "sargas79",
+  "systems": [
+    {
+      "kind": "system",
+      "id": "gworld",
+      "name": "GWorld - GURPS 4e",
+      "repo": "https://github.com/sargas79/GWorldVTT",
+      "manifest": "https://github.com/sargas79/GWorldVTT/releases/latest/download/system.json",
+      "version": "1.67.0",
+      "summary": "A GURPS 4th Edition game system implementing the Basic Set rules for Foundry VTT v14.",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14.367"
+      }
+    }
+  ],
+  "modules": [
+    {
+      "kind": "module",
+      "id": "sargas-time-bomb",
+      "name": "Sargas Time Bomb",
+      "repo": "https://github.com/sargas79/sargas-time-bomb",
+      "manifest": "https://github.com/sargas79/sargas-time-bomb/releases/latest/download/module.json",
+      "version": "1.2.2",
+      "summary": "Adventure clocks for Pathfinder 2e: progress, countdowns, threats, factions, corruption, alarms, projects and weather fronts.",
+      "compatibility": {
+        "minimum": "14.366",
+        "verified": "14.366"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "through-the-ages",
+      "name": "Through the Ages",
+      "repo": "https://github.com/sargas79/through-the-ages",
+      "manifest": "https://github.com/sargas79/through-the-ages/releases/latest/download/module.json",
+      "version": "2.2.0",
+      "summary": "A GM-managed custom world calendar with campaign notes and an expandable timeline of Ages and events.",
+      "compatibility": {
+        "minimum": "14.366",
+        "verified": "14.366"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "sargas-encounter-builder",
+      "name": "Sargas - Encounter Builder",
+      "repo": "https://github.com/sargas79/sargas-encounter-builder",
+      "manifest": "https://github.com/sargas79/sargas-encounter-builder/releases/latest/download/module.json",
+      "version": "0.3.2",
+      "summary": "A Pathfinder 2e GM workspace for party profiles, XP budgets, creature browsing and balanced encounter generation.",
+      "compatibility": {
+        "minimum": "14"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "sargas-investigation-board",
+      "name": "Sargas - Investigation Board",
+      "repo": "https://github.com/sargas79/sargas-investigation-board",
+      "manifest": "https://github.com/sargas79/sargas-investigation-board/releases/latest/download/module.json",
+      "version": "1.4.0",
+      "summary": "A collaborative pinboard where players pin clues and string them together to work cases as a party.",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14.367"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "sargas-dice-set",
+      "name": "Sargas Dice Set",
+      "repo": "https://github.com/sargas79/sargas-dice-set",
+      "manifest": "https://github.com/sargas79/sargas-dice-set/releases/latest/download/module.json",
+      "version": "0.5.0",
+      "summary": "Animated 3D dice for every roll in hand-designed Sargas, Oracle, Spiral Set and Classic styles.",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "sargas-visual-automation",
+      "name": "Sargas Visual Automation",
+      "repo": "https://github.com/sargas79/sargas-visual-automation",
+      "manifest": "https://github.com/sargas79/sargas-visual-automation/releases/latest/download/module.json",
+      "version": "0.3.1",
+      "summary": "Plays and automates JB2A animations directly, without Sequencer or Automated Animations.",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "blizzards-wondrous-spellbook",
+      "name": "Blizzard's Wondrous Spellbook",
+      "repo": "https://github.com/sargas79/wondrous-spellbook",
+      "manifest": "https://github.com/sargas79/wondrous-spellbook/releases/latest/download/module.json",
+      "version": "1.2.0",
+      "summary": "A spellbook creator and slot-fill tool for the Pathfinder Second Edition system.",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14.368"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "compendium-manager",
+      "name": "Compendium Manager",
+      "repo": "https://github.com/sargas79/compendium-manager",
+      "manifest": "https://github.com/sargas79/compendium-manager/releases/latest/download/module.json",
+      "version": "1.0.1",
+      "summary": "Shares one compendium library between two Pathfinder 2e worlds on the same Foundry installation.",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "victory-counter",
+      "name": "Victory Counter",
+      "repo": "https://github.com/sargas79/Victory-Counter",
+      "manifest": "https://github.com/sargas79/Victory-Counter/releases/latest/download/module.json",
+      "version": "2.4.0",
+      "summary": "Shared, always-visible progress and threshold tracks for any game system (Foundry v14).",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14.366"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "victory-counter",
+      "name": "Victory Counter",
+      "repo": "https://github.com/sargas79/Victory-Counter-v13",
+      "manifest": "https://github.com/sargas79/Victory-Counter-v13/releases/latest/download/module.json",
+      "version": "2.3.0",
+      "summary": "The Foundry v13 build of Victory Counter: shared progress and threshold tracks for any game system.",
+      "compatibility": {
+        "minimum": "13",
+        "verified": "14.366"
+      }
+    },
+    {
+      "kind": "module",
+      "id": "gurps-compendium-content",
+      "name": "GURPS Compendium Content",
+      "repo": "https://github.com/sargas79/gurps-compendium-content",
+      "manifest": "https://github.com/sargas79/gurps-compendium-content/releases/latest/download/module.json",
+      "version": "0.23.0",
+      "summary": "GURPS books' text and statistics overlaid onto the GWorld system's compendia, for one table whose members own the books.",
+      "compatibility": {
+        "minimum": "14",
+        "verified": "14.367"
+      }
+    }
+  ]
+}
