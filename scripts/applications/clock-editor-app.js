@@ -253,6 +253,7 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const mode = raw.advanceMode ?? "steps";
         out.advance = mode === "complete" ? "complete" : mode === "reset" ? "reset" : Number(raw.advanceSteps ?? prev.advance ?? 1);
         if (type === "scene") out.scenes = asList(raw.scenes);
+        if (type === "rest") out.onAdventureDay = raw.onAdventureDay === true || raw.onAdventureDay === "true";
         if (type === "time") {
           out.every = {};
           for (const u of EVERY_UNITS) if (raw.every?.[u] !== "" && raw.every?.[u] !== undefined) out.every[u] = Number(raw.every[u]);

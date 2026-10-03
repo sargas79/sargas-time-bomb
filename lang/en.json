@@ -160,7 +160,8 @@
       "catchup": "catch-up",
       "declared": "declared rest",
       "api": "API",
-      "proposal": "approved proposal"
+      "proposal": "approved proposal",
+      "adventureDay": "next adventure day"
     },
     "Trigger": {
       "sceneAny": "{adv} on any scene change",
@@ -178,7 +179,8 @@
       "unknownClock": "(missing clock)",
       "unknown": "Unknown trigger",
       "rest": "{adv} at rest",
-      "worldTime": "(world time)"
+      "worldTime": "(world time)",
+      "restAdventureDay": "{adv} at rest or on Through the Ages' next adventure day"
     },
     "Next": {
       "manual": "advances manually",
@@ -323,7 +325,9 @@
       "groupFaction": "Faction name (required)",
       "owner": "Owner",
       "ownerHint": "Shown on the card. Player proposals arrive in 1.1.",
-      "ownerUnknown": "Unknown user ({id})"
+      "ownerUnknown": "Unknown user ({id})",
+      "restAdventureDay": "Also count “Next adventure day” in Through the Ages",
+      "restAdventureDayHint": "The party waking up counts as a rest for this clock, even without Rest for the Night. Needs Through the Ages 2.2 or later."
     },
     "Log": {
       "when": "When",
@@ -373,7 +377,8 @@
       "rewind": "Campaign time moved backwards ({from} → {to}). Clocks were not un-ticked; adjust manually if needed.",
       "rewindWorldTime": "World time moved backwards. Clocks were not un-ticked; adjust manually if needed.",
       "actorTypeRefused": "“{name}” is a {type} actor; corruption clocks can only be bound to characters, NPCs and familiars.",
-      "racingCreated": "Created racing clocks for {a} and {b}."
+      "racingCreated": "Created racing clocks for {a} and {b}.",
+      "deadlinesInvalid": "The calendar's structure changed: {n} clock(s) have a deadline that no longer exists and will not fire until edited: {names}"
     },
     "Error": {
       "clockInvalid": "Not a clock.",

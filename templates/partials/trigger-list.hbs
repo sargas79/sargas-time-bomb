@@ -33,6 +33,14 @@
 
       {{#if isRest}}
         <span class="hint">{{stbT 'Editor.restHint'}}</span>
+        {{#if ../ttaMissing}}
+          <input type="hidden" name="triggers.{{index}}.onAdventureDay" value="{{onAdventureDay}}">
+        {{else}}
+          <div class="stb-trigger__row">
+            <label class="checkbox"><input type="checkbox" name="triggers.{{index}}.onAdventureDay" {{#if onAdventureDay}}checked{{/if}} {{#if ../readonly}}disabled{{/if}}> {{stbT 'Editor.restAdventureDay'}}</label>
+            <span class="hint">{{stbT 'Editor.restAdventureDayHint'}}</span>
+          </div>
+        {{/if}}
       {{/if}}
 
       {{#if isTime}}

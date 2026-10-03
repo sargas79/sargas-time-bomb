@@ -57,7 +57,7 @@ export function triggerText(trigger, { clocks = [], info = timeInfo() } = {}) {
         ? t("Trigger.sceneListed", { adv, scenes: trigger.scenes.map(sceneName).join(", ") })
         : t("Trigger.sceneAny", { adv });
     case "rest":
-      return t("Trigger.rest", { adv });
+      return t(trigger.onAdventureDay ? "Trigger.restAdventureDay" : "Trigger.rest", { adv });
     case "time": {
       const base = t(trigger.once ? "Trigger.timeOnce" : "Trigger.timeEvery", { adv, every: everyText(trigger.every) });
       return info?.hasCalendar ? base : `${base} ${t("Trigger.worldTime")}`;

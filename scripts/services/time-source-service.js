@@ -11,7 +11,7 @@
  */
 import { SETTINGS, TTA_HOOKS, TTA_ID, TTA_SETTING_KEY } from "../constants.js";
 import { debug, getSetting, warn } from "../compat.js";
-import { formatMoment as fallbackFormat, momentFromDateTime, normalizeCalendar } from "./schedule-service.js";
+import { formatMoment as fallbackFormat, momentFromDateTime, momentToSeconds as localMomentToSeconds, normalizeCalendar } from "./schedule-service.js";
 import { normalizeMoment } from "./clock-service.js";
 
 function momentKey(m) {
@@ -29,6 +29,8 @@ export class OffSource {
   formatMoment() { return ""; }
   calendar() { return null; }
   worldTime() { return null; }
+  momentToSeconds(m) { return localMomentToSeconds(m, null); }
+  elapsedBetween(from, to) { return localMomentToSeconds(to, null) - localMomentToSeconds(from, null); }
 }
 
 /* ------------------------------------------------------------------ */
@@ -55,6 +57,8 @@ export class WorldTimeSource {
   worldTime() { return globalThis.game?.time?.worldTime ?? null; }
   formatMoment(m) { return fallbackFormat(m, null); }
   calendar() { return null; }
+  momentToSeconds(m) { return localMomentToSeconds(m, null); }
+  elapsedBetween(from, to) { return localMomentToSeconds(to, null) - localMomentToSeconds(from, null); }
 }
 
 /* ------------------------------------------------------------------ */
@@ -65,7 +69,7 @@ export class TTASource {
   #onChange = null;
   #lastKey = "";
   #calendarCache = null;
-  #monthBase = null;
+  #lastReasonKey = "";
 
   static get module() { return globalThis.game?.modules?.get(TTA_ID) ?? null; }
   static get isActive() { return !!TTASource.module?.active; }
@@ -82,9 +86,13 @@ export class TTASource {
       this.#report();
     })]);
     // Fast path on the client that moved time; deduplicated by moment.
-    this.#hooks.push([TTA_HOOKS.timeChanged, H.on(TTA_HOOKS.timeChanged, () => this.#report())]);
+    // TTA 2.2+ says why time moved; a "next adventure day" may count as a rest.
+    this.#hooks.push([TTA_HOOKS.timeChanged, H.on(TTA_HOOKS.timeChanged, payload => this.#report({ reason: payload?.reason ?? null }))]);
     this.#hooks.push([TTA_HOOKS.dateChanged, H.on(TTA_HOOKS.dateChanged, () => this.#report())]);
-    this.#hooks.push([TTA_HOOKS.calendarConfigured, H.on(TTA_HOOKS.calendarConfigured, () => { this.#calendarCache = null; this.#report({ reconfigured: true }); })]);
+    this.#hooks.push([TTA_HOOKS.calendarConfigured, H.on(TTA_HOOKS.calendarConfigured, payload => {
+      this.#calendarCache = null;
+      this.#report({ reconfigured: true, structureChanged: payload?.structureChanged !== false });
+    })]);
   }
 
   stop() {
@@ -95,9 +103,21 @@ export class TTASource {
   #report(extra = {}) {
     const moment = this.currentMoment();
     const key = momentKey(moment);
-    if (!extra.reconfigured && key && key === this.#lastKey) return;
+    const { reason, ...rest } = extra;
+    // TTA writes the setting first (updateSetting fires here) and then calls its
+    // local timeChanged hook with the reason. The moment is reported exactly
+    // once; a "next adventure day" reason that arrives for an already-reported
+    // moment is passed on as a rest-only notice, never as a second time step.
+    if (!rest.reconfigured && key && key === this.#lastKey) {
+      if (reason === "nextAdventureDay" && this.#lastReasonKey !== key) {
+        this.#lastReasonKey = key;
+        this.#onChange?.({ moment, worldTime: globalThis.game?.time?.worldTime ?? null, source: this.id, adventureDayOnly: true });
+      }
+      return;
+    }
     this.#lastKey = key;
-    this.#onChange?.({ moment, worldTime: globalThis.game?.time?.worldTime ?? null, source: this.id, ...extra });
+    if (reason === "nextAdventureDay") this.#lastReasonKey = key;
+    this.#onChange?.({ moment, worldTime: globalThis.game?.time?.worldTime ?? null, source: this.id, reason: reason ?? null, ...rest });
   }
 
   /** Raw calendar object as TTA exposes it. */
@@ -127,7 +147,7 @@ export class TTASource {
     const cal = normalizeCalendar({
       monthLengths,
       monthNames,
-      monthBase: this.#inferMonthBase(monthLengths.length),
+      monthBase: 1, // TTA dates are 1-based (date-service.toAbsoluteDay)
       hoursPerDay: inner.hoursPerDay ?? raw.hoursPerDay,
       minutesPerHour: inner.minutesPerHour ?? raw.minutesPerHour,
       secondsPerMinute: inner.secondsPerMinute ?? raw.secondsPerMinute
@@ -136,19 +156,34 @@ export class TTASource {
     return cal;
   }
 
-  #inferMonthBase(monthCount) {
-    const d = this.#rawDate();
-    if (d && Number.isFinite(d.month)) {
-      if (d.month === 0) this.#monthBase = 0;
-      else if (d.month === monthCount) this.#monthBase = 1;
-    }
-    if (this.#monthBase === null) {
-      const raw = this.#rawCalendar();
-      const inner = raw?.calendar ?? raw ?? {};
-      if (Number.isFinite(inner.monthBase)) this.#monthBase = inner.monthBase ? 1 : 0;
-      else if (inner.zeroBasedMonths === true) this.#monthBase = 0;
-    }
-    return this.#monthBase ?? 1;
+  /**
+   * Seconds for a moment, preferring TTA's own arithmetic (2.2+) so deadlines
+   * and elapsed time agree exactly with the calendar; otherwise the local sum.
+   */
+  momentToSeconds(moment) {
+    const viaTTA = this.#ttaSeconds(moment);
+    return Number.isFinite(viaTTA) ? viaTTA : localMomentToSeconds(moment, this.calendar());
+  }
+
+  #ttaSeconds(moment) {
+    const m = normalizeMoment(moment);
+    if (!m) return NaN;
+    const api = TTASource.api;
+    try {
+      if (typeof api?.utils?.campaignSeconds === "function" && typeof api.getCalendar === "function") {
+        const v = api.utils.campaignSeconds({ year: m.year, month: m.month, day: m.day }, { hour: m.hour, minute: m.minute }, api.getCalendar());
+        return Number.isFinite(v) ? v : NaN;
+      }
+    } catch (e) { debug("TTA campaignSeconds failed", e); }
+    return NaN;
+  }
+
+  /** Seconds from `from` to `to`, computed with one arithmetic for both ends. */
+  elapsedBetween(from, to) {
+    const a = this.#ttaSeconds(from), b = this.#ttaSeconds(to);
+    if (Number.isFinite(a) && Number.isFinite(b)) return b - a;
+    const cal = this.calendar();
+    return localMomentToSeconds(to, cal) - localMomentToSeconds(from, cal);
   }
 
   #rawDate() {
@@ -251,7 +286,9 @@ export function timeInfo() {
     moment: src.currentMoment(),
     worldTime: globalThis.game?.time?.worldTime ?? null,
     calendar: src.calendar?.() ?? null,
-    hasCalendar: !!src.hasCalendar
+    hasCalendar: !!src.hasCalendar,
+    momentToSeconds: m => src.momentToSeconds(m),
+    elapsedBetween: (from, to) => src.elapsedBetween(from, to)
   };
 }
 

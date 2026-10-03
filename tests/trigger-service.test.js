@@ -28,6 +28,16 @@ test("rest trigger and advance keywords", () => {
   assert.equal(evaluate(reset, { type: "rest" }).reset, true);
 });
 
+test("rest trigger: next adventure day counts only when the trigger opts in", () => {
+  const plain = mk([{ id: "t", type: "rest", advance: 1 }]);
+  const optIn = mk([{ id: "t", type: "rest", advance: 1, onAdventureDay: true }]);
+  const day = { type: "rest", actors: [], source: "adventureDay" };
+  assert.equal(evaluate(plain, day).delta, 0);
+  assert.equal(evaluate(optIn, day).delta, 1);
+  assert.equal(evaluate(optIn, { type: "rest", actors: ["Actor.a"] }).delta, 1, "a real rest still counts");
+  assert.equal(describeTrigger(optIn.triggers[0]).key, "restAdventureDay");
+});
+
 test("time trigger buckets elapsed seconds with carry across events", () => {
   let c = mk([{ id: "t", type: "time", advance: 1, every: { days: 1 } }]);
   let total = 0;

@@ -39,7 +39,10 @@ export function matchesScene(trigger, event) {
 }
 
 export function matchesRest(trigger, event) {
-  return trigger.type === "rest" && event.type === "rest";
+  if (trigger.type !== "rest" || event.type !== "rest") return false;
+  // Through the Ages' "next adventure day" counts only for triggers that opt in.
+  if (event.source === "adventureDay") return trigger.onAdventureDay === true;
+  return true;
 }
 
 export function matchesHook(trigger, event) {
@@ -181,7 +184,7 @@ export function checkLinkChain(clockId, allClocks, maxDepth = LIMITS.LINK_DEPTH_
 export function describeTrigger(trigger) {
   switch (trigger?.type) {
     case "scene": return { key: trigger.scenes?.length ? "sceneListed" : "sceneAny", data: { count: trigger.scenes?.length ?? 0, advance: trigger.advance } };
-    case "rest": return { key: "rest", data: { advance: trigger.advance } };
+    case "rest": return { key: trigger.onAdventureDay ? "restAdventureDay" : "rest", data: { advance: trigger.advance } };
     case "time": {
       const parts = [];
       for (const [unit, n] of Object.entries(trigger.every ?? {})) parts.push({ unit, n });

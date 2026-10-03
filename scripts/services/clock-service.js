@@ -68,6 +68,7 @@ export function normalizeTrigger(raw, idGen = fallbackId) {
       t.scenes = Array.isArray(raw.scenes) ? raw.scenes.filter(s => typeof s === "string") : [];
       break;
     case "rest":
+      t.onAdventureDay = raw.onAdventureDay === true;
       break;
     case "time": {
       const every = raw.every && typeof raw.every === "object" ? raw.every : { days: 1 };

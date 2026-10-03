@@ -92,7 +92,7 @@ module socket.
 |---|---|---|
 | Manual | A GM clicks or calls the API | Always available |
 | Scene change | A scene is activated (or, by setting, viewed by the GM) | Optionally limited to listed scenes; re-activating the same scene does not count |
-| Rest | `pf2e.restForTheNight` (called once per actor after Rest for the Night) or **Declare rest** | A party resting together is folded into one rest within the debounce window; the hook's payload is verified before it is trusted |
+| Rest | `pf2e.restForTheNight` (called once per actor after Rest for the Night) or **Declare rest**; optionally Through the Ages' **Next adventure day** | A party resting together is folded into one rest within the debounce window; the hook's payload is verified before it is trusted. A rest trigger may opt in to counting the next adventure day (TTA 2.2+). TTA reports the reason only on the client that pressed the button, so this works when the primary GM presses it |
 | Elapsed time | Campaign time advances by the period (hours / days / weeks) | Remainders carry over, so 3 × 8 h = exactly 1 day |
 | Calendar date | The campaign moment reaches a date | Needs a calendar time source; may repeat every N hours/days/weeks |
 | Foundry hook | A curated hook (`combatRound`, `combatStart`, `deleteCombat`, `pf2e.startTurn`, `pf2e.endTurn`, PF2e check roll posted, `pauseGame`) or any free-text hook | Free-text hooks are listed under **Module Settings → Registered hooks** |
@@ -121,7 +121,10 @@ the next GM takes over and catches up.
 
 The module measures elapsed time from its own stored *last processed moment*,
 not from the previous event, so bursts of advances and missed events cannot
-lose time. While Through the Ages is the source, Foundry world-time changes
+lose time. With Through the Ages 2.2 or later it measures with the calendar's
+own `campaignSeconds`, so deadlines agree with it exactly, and a structural
+change to the calendar (month count or lengths) produces one GM warning naming
+the clocks whose stored deadlines no longer exist. While Through the Ages is the source, Foundry world-time changes
 (combat rounds, PF2e's own World Clock) are ignored; use the explicit **Combat
 round** hook trigger if you want a per-round clock. Without Through the Ages,
 PF2e's World Clock moves world time and ticks clocks like any other change. A rewind of campaign time never
