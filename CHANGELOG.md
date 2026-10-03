@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-03
+
+### Added
+- **Break timer**: from the board's `⋯` menu a GM starts a real-world countdown
+  of 1–60 minutes (a lunch break, a pause). Every client shows it in a banner
+  at the top of the screen and gets a notification and a chime when it ends. It
+  follows the wall clock, survives reloads and never touches campaign time.
+  API: `startBreak(minutes)`, `cancelBreak()`, `getBreak()`.
+
 ## [1.2.2] - 2026-10-03
 
 ### Fixed

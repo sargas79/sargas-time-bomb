@@ -202,6 +202,7 @@
     "Board": {
       "title": "Adventure Clocks",
       "button": "Clocks",
+      "breakTimer": "Break timer…",
       "search": "Search clocks…",
       "filterKind": "Filter by kind",
       "allKinds": "All kinds",
@@ -363,6 +364,18 @@
       "unnamedThreshold": "unnamed",
       "catchupTitle": "While no GM was online",
       "annotated": "Note added: {note}"
+    },
+    "Break": {
+      "label": "Break",
+      "title": "Break timer",
+      "minutesLabel": "Length in minutes ({min}–{max})",
+      "hint": "Counts down in real time for everyone at the table, whatever the campaign clock does.",
+      "hintRunning": "A break is already running; starting a new one replaces it.",
+      "start": "Start break",
+      "cancel": "End the break now",
+      "started": "Break started: {n} minute(s).",
+      "over": "The break is over — back to the table!",
+      "invalid": "Enter a number of minutes between {min} and {max}."
     },
     "Notify": {
       "gmOnly": "Only a GM can change clocks.",
