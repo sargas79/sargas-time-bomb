@@ -33,9 +33,9 @@ test("normalizeClock clamps and repairs malformed input", () => {
   assert.ok(c.triggerState[c.triggers[0].id]);
 });
 
-test("alarm defaults to zero segments and actor-owners needs an actor", () => {
-  const a = normalizeClock({ kind: "alarm" });
-  assert.equal(a.segments, 0);
+test("alarm has one segment and actor-owners needs an actor", () => {
+  const a = normalizeClock({ kind: "alarm", segments: 12 });
+  assert.equal(a.segments, 1);
   const c = normalizeClock({ kind: "corruption", visibility: "actor-owners" });
   assert.equal(c.visibility, "gm-only");
   const c2 = normalizeClock({ kind: "corruption", visibility: "actor-owners", actorUuid: "Actor.abc" });
@@ -109,24 +109,62 @@ test("stayFull behaves like stop", () => {
 
 test("weather front cycles through labels and emits weatherChanged", () => {
   const w = createClock({ kind: "weather" });
+  assert.equal(w.segmentLabels.length, w.segments, "exactly one label per segment");
   assert.equal(currentLabel(w), "Clear");
   let r = applyDelta(w, 1, ctx);
-  assert.equal(currentLabel(r.clock), "Overcast");
+  assert.equal(currentLabel(r.clock), "Breezy");
   const ev = r.events.find(e => e.type === "weatherChanged");
-  assert.deepEqual([ev.previousLabel, ev.label], ["Clear", "Overcast"]);
-  r = applyDelta(r.clock, 5, ctx); // wraps back to index 0
+  assert.deepEqual([ev.previousLabel, ev.label], ["Clear", "Breezy"]);
+  r = applyDelta(r.clock, 4, ctx);
+  assert.equal(currentLabel(r.clock), "Clearing");
+  r = applyDelta(r.clock, 1, ctx); // after Clearing the next tick completes a cycle and wraps to Clear
   assert.equal(r.clock.filled, 0);
   assert.equal(currentLabel(r.clock), "Clear");
+  assert.ok(r.events.some(e => e.type === "completed" && e.repeat));
 });
 
-test("alarm completes on any positive delta and re-arms on negative", () => {
+test("repeating clocks never store a full state, in both directions (D10)", () => {
+  const fill = normalizeClock({ kind: "progress", segments: 4, onComplete: "repeat", filled: 4 });
+  assert.equal(fill.filled, 0, "normalisation wraps a stored full state");
+  assert.equal(isComplete(fill), false);
+  let r = applyDelta(fill, 4, ctx);
+  assert.equal(r.clock.filled, 0);
+  assert.equal(r.events.filter(e => e.type === "completed").length, 1);
+  r = completeClock(fill, ctx);
+  assert.equal(r.clock.filled, 0, "complete wraps instead of resting at full");
+  r = setFilled(fill, 4, ctx);
+  assert.equal(r.clock.filled, 0, "set to full wraps too");
+
+  const drain = normalizeClock({ kind: "countdown", segments: 4, onComplete: "repeat", filled: 0 });
+  assert.equal(drain.filled, 4, "drain repeat never rests at empty");
+  r = applyDelta(drain, 4, ctx);
+  assert.equal(r.clock.filled, 4);
+  assert.equal(r.events.filter(e => e.type === "completed").length, 1);
+  r = applyDelta(drain, 5, ctx);
+  assert.equal(r.clock.filled, 3);
+});
+
+test("alarm is not complete until its first fire; repeat re-arms by wrapping", () => {
   const a = createClock({ kind: "alarm" });
+  assert.equal(a.segments, 1);
   assert.equal(isComplete(a), false);
   const r = applyDelta(a, 1, { ...ctx, moment: { year: 1, month: 1, day: 1, hour: 0, minute: 0 } });
+  assert.equal(r.clock.filled, 1);
   assert.ok(isComplete(r.clock));
   assert.ok(r.events.some(e => e.type === "completed"));
+  assert.equal(applyDelta(r.clock, 1, ctx).changed, false, "a fired alarm stays fired");
   const back = applyDelta(r.clock, -1, ctx);
   assert.equal(isComplete(back.clock), false);
+  const recurring = normalizeClock({ kind: "alarm", onComplete: "repeat" });
+  const fired = applyDelta(recurring, 1, ctx);
+  assert.equal(fired.clock.filled, 0, "recurring alarm wraps back to empty");
+  assert.ok(fired.events.some(e => e.type === "completed"));
+});
+
+test("thresholds may carry an effect link that is never applied", () => {
+  const c = normalizeClock({ kind: "corruption", segments: 6, actorUuid: "Actor.a", thresholds: [{ at: 3, label: "Drained", effectUuid: "Compendium.pf2e.conditionitems.Item.abc" }, { at: 6, label: "x", effectUuid: 42 }] });
+  assert.equal(c.thresholds[0].effectUuid, "Compendium.pf2e.conditionitems.Item.abc");
+  assert.equal(c.thresholds[1].effectUuid, null);
 });
 
 test("setFilled, resetClock, completeClock", () => {
@@ -141,10 +179,6 @@ test("setFilled, resetClock, completeClock", () => {
   assert.equal(res.clock.filled, 0);
   assert.equal(res.clock.completedAt, null);
   assert.equal(res.events[0].type, "reset");
-  const rep = normalizeClock({ kind: "weather", onComplete: "repeat", segments: 6 });
-  const full = completeClock(rep, ctx);
-  assert.equal(full.clock.onComplete, "repeat");
-  assert.equal(full.clock.filled, 6);
 });
 
 test("log is capped at LOG_MAX newest first", () => {
@@ -161,7 +195,8 @@ test("changeKind swaps presets only where untouched", () => {
   assert.equal(t.icon, "fa-solid fa-skull");
   assert.ok(t.thresholds.every(th => th.at <= 6));
   const a = changeKind(c, "alarm");
-  assert.equal(a.segments, 0);
+  assert.equal(a.segments, 1);
+  assert.equal(changeKind(a, "progress").segments, 6);
   const custom = changeKind({ ...c, icon: "fa-solid fa-cat" }, "weather");
   assert.equal(custom.icon, "fa-solid fa-cat");
   assert.equal(custom.segmentLabels.length, 6);

@@ -32,13 +32,7 @@
       {{/if}}
 
       {{#if isRest}}
-        <div class="stb-trigger__row">
-          <label>{{stbT 'Editor.restKinds'}}</label>
-          <select name="triggers.{{index}}.kinds" multiple size="2" {{#if ../readonly}}disabled{{/if}}>
-            {{#each restKinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
-          </select>
-          <span class="hint">{{stbT 'Editor.restKindsHint'}}</span>
-        </div>
+        <span class="hint">{{stbT 'Editor.restHint'}}</span>
       {{/if}}
 
       {{#if isTime}}

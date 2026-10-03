@@ -3,8 +3,9 @@
  * create a corruption clock, export/import.
  */
 import { APP_IDS, KINDS, MODULE_ID, SETTINGS, VISIBILITY, VISIBILITIES } from "../constants.js";
+import { enrich } from "../compat.js";
 import { getDialogV2, getSetting, isGM, moduleVersion, notify, randomID, rerenderModuleApps, t } from "../compat.js";
-import { isComplete } from "../services/clock-service.js";
+import { isComplete, reachedThreshold } from "../services/clock-service.js";
 import * as dispatcher from "../services/dispatcher-service.js";
 import { exportEnvelope, parseImport } from "../services/portability-service.js";
 import { canView } from "../services/permission-service.js";
@@ -89,7 +90,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const c of filtered) {
       const key = c.group || "";
       if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(this.#cardContext(c, all, info, gm));
+      groups.get(key).push(await this.#cardContext(c, all, info, gm));
     }
     const groupList = [...groups.entries()]
       .sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : a.localeCompare(b)))
@@ -131,10 +132,14 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
-  #cardContext(clock, all, info, gm) {
+  async #cardContext(clock, all, info, gm) {
     const complete = isComplete(clock);
     const actor = clock.actorUuid ? store.resolveActor(clock.actorUuid) : null;
+    const threshold = reachedThreshold(clock);
+    const effectLink = threshold?.effectUuid ? await enrich(`@UUID[${threshold.effectUuid}]`) : null;
     return {
+      effectLink,
+      thresholdNote: threshold?.note || null,
       clock,
       id: clock.id,
       name: clock.name,
@@ -153,11 +158,11 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
       actorName: actor?.name ?? null,
       actorUuid: clock.actorUuid,
       complete,
-      expired: clock.segments === 0 && complete && !clock.dismissed,
+      expired: clock.kind === "alarm" && complete && !clock.dismissed,
       canControl: gm,
-      canAdvance: gm && (!complete || clock.onComplete === "repeat"),
-      canRetreat: gm && (clock.segments > 0 ? (clock.direction === "drain" ? clock.filled < clock.segments : clock.filled > 0) : complete),
-      isAlarm: clock.segments === 0,
+      canAdvance: gm && !complete,
+      canRetreat: gm && (clock.direction === "drain" ? clock.filled < clock.segments : clock.filled > 0),
+      isAlarm: clock.kind === "alarm",
       description: clock.description,
       triggerCount: clock.triggers?.length ?? 0,
       completedAt: typeof clock.completedAt === "object" && clock.completedAt ? formatMoment(clock.completedAt) : clock.completedAt
@@ -193,6 +198,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (data?.type !== "Actor" || !data.uuid) return;
     const actor = store.resolveActor(data.uuid);
     if (!actor) return;
+    if (!store.isBindableActor(actor)) { notify("warn", t("Notify.actorTypeRefused", { name: actor.name, type: actor.type })); return; }
     if (!actor.isToken && !data.uuid.startsWith("Actor.") && actor.uuid) data.uuid = actor.uuid;
     const existing = store.getAllClocks().find(c => c.kind === "corruption" && c.actorUuid === data.uuid);
     if (existing) {
@@ -255,7 +261,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onSetExact(event, target) {
     const clock = store.getClock(BoardApp.#clockId(target));
-    if (!clock || clock.segments === 0) return;
+    if (!clock || clock.kind === "alarm") return;
     const Dialog = getDialogV2();
     if (!Dialog) return;
     const value = await Dialog.prompt({
@@ -295,10 +301,10 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     rerenderModuleApps();
   }
 
-  static async #onDeclareRest(event, target) {
-    const kind = target.dataset.kind || "long";
-    declareRest({ kind });
-    notify("info", t("Notify.restDeclared", { kind: t(`Rest.${kind}`) }));
+  static async #onDeclareRest() {
+    const actors = (globalThis.game.actors?.contents ?? []).filter(a => a.type === "character" && a.hasPlayerOwner).map(a => a.uuid);
+    declareRest({ actors });
+    notify("info", t("Notify.restDeclared", { n: actors.length }));
   }
 
   static async #onEvaluateNow() {

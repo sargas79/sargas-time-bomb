@@ -15,6 +15,7 @@
     {{#if actorName}}
       <div class="stb-card__meta" data-actor-uuid="{{actorUuid}}"><a data-action="openActor"><i class="fa-solid fa-user"></i> {{actorName}}</a></div>
     {{/if}}
+    {{#if effectLink}}<div class="stb-card__effect">{{{effectLink}}}</div>{{/if}}
     {{#if next}}<div class="stb-card__next"><i class="fa-regular fa-clock"></i> {{next}}</div>{{/if}}
     {{#if expired}}<div class="stb-card__expired"><i class="fa-solid fa-bell"></i> {{stbT 'Board.alarmExpired'}}{{#if completedAt}} · {{completedAt}}{{/if}}</div>{{/if}}
     {{#if canControl}}

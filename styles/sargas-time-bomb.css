@@ -170,3 +170,10 @@
 .stb-chat-card__state { font-weight: 600; }
 .stb-chat-card__note { font-style: italic; font-size: 0.9em; }
 .stb-chat-card footer { display: flex; gap: 1em; font-size: 0.8em; color: var(--stb-muted); }
+
+/* ---------- Effect links (PF2e conditions / effects, never auto-applied) ---------- */
+.stb .stb-effect { display: inline-flex; align-items: center; gap: 0.3em; flex: 0 0 auto; min-width: 1.6em; }
+.stb .stb-effect__empty { color: var(--stb-muted); opacity: 0.6; }
+.stb .stb-effect button { width: 1.6em; height: 1.6em; padding: 0; line-height: 1; }
+.stb-card__effect, .stb-chat-card__effect { font-size: 0.9em; }
+.stb-chat-card__effect .stb-chat-card__note { margin-left: 0.4em; }

@@ -68,8 +68,8 @@ export const KIND_DEFAULTS = Object.freeze({
   alarm: {
     icon: "fa-solid fa-bell",
     color: "#b3892a",
-    segments: 0,
-    segmentPresets: [0],
+    segments: 1,
+    segmentPresets: [1],
     direction: "fill",
     onComplete: "stop",
     visibility: VISIBILITY.GM_ONLY,
@@ -85,7 +85,7 @@ export const KIND_DEFAULTS = Object.freeze({
     onComplete: "stop",
     visibility: VISIBILITY.PLAYERS,
     thresholds: [],
-    triggers: [{ type: "rest", advance: 1, kinds: [] }]
+    triggers: [{ type: "rest", advance: 1 }]
   },
   weather: {
     icon: "fa-solid fa-cloud-sun-rain",
@@ -95,7 +95,7 @@ export const KIND_DEFAULTS = Object.freeze({
     direction: "fill",
     onComplete: "repeat",
     visibility: VISIBILITY.PLAYERS,
-    segmentLabels: ["Clear", "Overcast", "Rain", "Storm", "Clearing", "Clear"],
+    segmentLabels: ["Clear", "Breezy", "Overcast", "Rain", "Storm", "Clearing"],
     thresholds: [],
     triggers: [{ type: "time", advance: 1, every: { hours: 6 } }]
   }
@@ -117,6 +117,6 @@ export function kindPreset(kind) {
     visibility: d.visibility,
     segmentLabels: Array.isArray(d.segmentLabels) ? [...d.segmentLabels] : [],
     thresholds: d.thresholds.map(t => ({ ...t })),
-    triggers: d.triggers.map(t => ({ ...t, every: t.every ? { ...t.every } : undefined, kinds: t.kinds ? [...t.kinds] : undefined }))
+    triggers: d.triggers.map(t => ({ ...t, every: t.every ? { ...t.every } : undefined }))
   };
 }

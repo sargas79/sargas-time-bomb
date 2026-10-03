@@ -27,8 +27,8 @@ class HooksStub {
 }
 
 class Document {
-  constructor({ id, documentName, name = "", flags = {}, ownership = {}, uuid = null, isGM = false }) {
-    this.id = id; this.documentName = documentName; this.name = name;
+  constructor({ id, documentName, name = "", flags = {}, ownership = {}, uuid = null, isGM = false, type = null, folder = null }) {
+    this.id = id; this.documentName = documentName; this.name = name; this.type = type; this.folder = folder;
     this.flags = structuredClone(flags); this.ownership = { default: 0, ...ownership };
     this.uuid = uuid ?? `${documentName}.${id}`;
     this.updates = [];
@@ -46,6 +46,15 @@ class Document {
     }
     return this;
   }
+  get hasPlayerOwner() {
+    return Object.entries(this.ownership).some(([k, v]) => k !== "default" && v >= 3);
+  }
+  async delete() {
+    this.deleted = true;
+    const coll = this.documentName === "JournalEntry" ? this._collection : null;
+    coll?.delete(this.id);
+    return this;
+  }
   testUserPermission(user, level) {
     const lvl = typeof level === "string" ? ({ NONE: 0, LIMITED: 1, OBSERVER: 2, OWNER: 3 })[level] : level;
     return user.isGM || (this.ownership[user.id] ?? this.ownership.default ?? 0) >= lvl;
@@ -58,7 +67,7 @@ class Collection extends Map {
   filter(fn) { return this.contents.filter(fn); }
 }
 
-export function installFoundryStub({ users = [{ id: "gm1", isGM: true, active: true }], currentUserId = "gm1", worldTime = 0, system = "generic" } = {}) {
+export function installFoundryStub({ users = [{ id: "gm1", isGM: true, active: true }], currentUserId = "gm1", worldTime = 0, system = "pf2e" } = {}) {
   const prev = {};
   const keep = (k, v) => { prev[k] = globalThis[k]; globalThis[k] = v; };
 
@@ -115,12 +124,12 @@ export function installFoundryStub({ users = [{ id: "gm1", isGM: true, active: t
     for (const c of [actors, journal]) for (const d of c.values()) if (d.uuid === uuid) return d;
     return null;
   });
-  keep("JournalEntry", { async create(data) { const d = new Document({ id: nextId(), documentName: "JournalEntry", ...data }); journal.set(d.id, d); return d; } });
+  keep("JournalEntry", { async create(data) { const d = new Document({ id: nextId(), documentName: "JournalEntry", ...data }); d._collection = journal; journal.set(d.id, d); return d; } });
   keep("Folder", { async create(data) { const d = new Document({ id: nextId(), documentName: "Folder", ...data }); d.type = data.type; folders.set(d.id, d); return d; } });
   keep("ChatMessage", { async create(data) { chat.push(structuredClone(data)); return data; } });
 
   // Register the module's own hidden settings so the store can read them.
-  for (const key of ["clocks", "actorIndex", "registeredHooks"]) settingsApi.register(MODULE_ID, key, { default: [] });
+  for (const key of ["clocks", "registeredHooks"]) settingsApi.register(MODULE_ID, key, { default: [] });
   settingsApi.register(MODULE_ID, "state", { default: {} });
   for (const key of ["privateEntryId", "folderId"]) settingsApi.register(MODULE_ID, key, { default: "" });
   settingsApi.register(MODULE_ID, "timeSource", { default: "auto" });
@@ -128,8 +137,8 @@ export function installFoundryStub({ users = [{ id: "gm1", isGM: true, active: t
   settingsApi.register(MODULE_ID, "restDebounceSeconds", { default: 0 });
   settingsApi.register(MODULE_ID, "debugLogging", { default: false });
 
-  const addActor = ({ id = nextId(), name = "Actor", ownership = {} } = {}) => {
-    const a = new Document({ id, documentName: "Actor", name, ownership });
+  const addActor = ({ id = nextId(), name = "Actor", ownership = {}, type = "character" } = {}) => {
+    const a = new Document({ id, documentName: "Actor", name, ownership, type });
     actors.set(a.id, a);
     return a;
   };

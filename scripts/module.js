@@ -133,14 +133,17 @@ Hooks.once("ready", async () => {
 
   registerSceneHooks();
   startRestService(payload => {
-    // Declared rests run on the declaring GM's client; system rests on the primary GM.
+    // Declared rests run on the declaring GM's client; PF2e rests on the primary GM.
     const local = payload.source === "declared" && payload.declaredBy === game.user.id;
-    dispatcher.dispatch({ type: "rest", kind: payload.kind, actors: payload.actors }, { local });
+    dispatcher.dispatch({ type: "rest", actors: payload.actors }, { local });
   });
   startTimeSource(change => onTimeChange(change));
 
   if (isGM()) {
     await syncHookListeners();
+    if (dispatcher.isPrimaryGM()) {
+      try { await store.syncMirrors(); } catch (e) { warn("mirror sync failed", e); }
+    }
     let catchUp = true;
     try { catchUp = !!getSetting(SETTINGS.catchUpOnConnect); } catch { /* ignore */ }
     if (catchUp && dispatcher.isPrimaryGM()) {

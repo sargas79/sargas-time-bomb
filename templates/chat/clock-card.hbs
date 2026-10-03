@@ -10,7 +10,9 @@
       {{#each lines}}<li>{{this}}</li>{{/each}}
     </ul>
     {{#if stateLabel}}<div class="stb-chat-card__state">{{stateLabel}}</div>{{/if}}
-    {{#if threshold}}{{#if threshold.note}}<div class="stb-chat-card__note">{{threshold.note}}</div>{{/if}}{{/if}}
+    {{#each effects}}
+      <div class="stb-chat-card__effect">{{#if link}}{{{link}}}{{/if}}{{#if note}}<span class="stb-chat-card__note">{{note}}</span>{{/if}}</div>
+    {{/each}}
     <footer>
       <span><i class="fa-solid fa-bolt"></i> {{source}}</span>
       {{#if moment}}<span><i class="fa-regular fa-calendar"></i> {{moment}}</span>{{/if}}

@@ -51,7 +51,8 @@ export function normalizeThreshold(raw, segments) {
   return {
     at,
     label: cleanString(raw.label, LIMITS.LABEL_MAX),
-    note: cleanString(raw.note, LIMITS.DESCRIPTION_MAX)
+    note: cleanString(raw.note, LIMITS.DESCRIPTION_MAX),
+    effectUuid: typeof raw.effectUuid === "string" && raw.effectUuid ? raw.effectUuid.slice(0, 200) : null
   };
 }
 
@@ -67,7 +68,6 @@ export function normalizeTrigger(raw, idGen = fallbackId) {
       t.scenes = Array.isArray(raw.scenes) ? raw.scenes.filter(s => typeof s === "string") : [];
       break;
     case "rest":
-      t.kinds = Array.isArray(raw.kinds) ? raw.kinds.filter(k => typeof k === "string") : [];
       break;
     case "time": {
       const every = raw.every && typeof raw.every === "object" ? raw.every : { days: 1 };
@@ -127,9 +127,7 @@ export function normalizeLogEntry(raw) {
 export function normalizeClock(raw = {}, { idGen = fallbackId } = {}) {
   const kind = KINDS.includes(raw.kind) ? raw.kind : "progress";
   const preset = kindPreset(kind);
-  const segments = kind === "alarm" && (raw.segments === undefined || raw.segments === null)
-    ? 0
-    : clampInt(raw.segments, LIMITS.SEGMENTS_MIN, LIMITS.SEGMENTS_MAX, preset.segments);
+  const segments = kind === "alarm" ? 1 : clampInt(raw.segments, LIMITS.SEGMENTS_MIN, LIMITS.SEGMENTS_MAX, preset.segments);
   const direction = DIRECTIONS.includes(raw.direction) ? raw.direction : preset.direction;
   const onComplete = ON_COMPLETE.includes(raw.onComplete) ? raw.onComplete : preset.onComplete;
   let visibility = VISIBILITIES.includes(raw.visibility) ? raw.visibility : preset.visibility;
@@ -137,7 +135,9 @@ export function normalizeClock(raw = {}, { idGen = fallbackId } = {}) {
   if (visibility === VISIBILITY.ACTOR_OWNERS && !actorUuid) visibility = VISIBILITY.GM_ONLY;
 
   const defaultFilled = direction === "drain" ? segments : 0;
-  const filled = clampInt(raw.filled, 0, segments, defaultFilled);
+  let filled = clampInt(raw.filled, 0, segments, defaultFilled);
+  // D10: a repeating clock never rests at its complete value; it wraps to the start.
+  if (onComplete === "repeat" && filled === (direction === "drain" ? 0 : segments)) filled = defaultFilled;
 
   const thresholds = (Array.isArray(raw.thresholds) ? raw.thresholds : preset.thresholds)
     .map(t => normalizeThreshold(t, segments))
@@ -163,8 +163,11 @@ export function normalizeClock(raw = {}, { idGen = fallbackId } = {}) {
     };
   }
 
+  // Either empty, or exactly one label per segment.
   const segmentLabelsRaw = Array.isArray(raw.segmentLabels) ? raw.segmentLabels : preset.segmentLabels;
-  const segmentLabels = segmentLabelsRaw.slice(0, segments).map(l => cleanString(l, LIMITS.LABEL_MAX));
+  let segmentLabels = segmentLabelsRaw.slice(0, segments).map(l => cleanString(l, LIMITS.LABEL_MAX));
+  if (segmentLabels.some(l => l !== "")) while (segmentLabels.length < segments) segmentLabels.push("");
+  else segmentLabels = [];
 
   const log = (Array.isArray(raw.log) ? raw.log : []).map(normalizeLogEntry).filter(Boolean).slice(0, LOG_MAX);
 
@@ -228,29 +231,28 @@ export function completeValue(clock) {
   return clock.direction === "drain" ? 0 : clock.segments;
 }
 
-/** How many progress units remain until completion. */
+/** How many progress units remain until completion (or until the next cycle for repeating clocks). */
 export function remaining(clock) {
-  if (clock.segments === 0) return clock.completedAt ? 0 : 1;
   return clock.direction === "drain" ? clock.filled : clock.segments - clock.filled;
 }
 
 /** Progress made so far in direction-agnostic units. */
 export function progress(clock) {
-  if (clock.segments === 0) return clock.completedAt ? 1 : 0;
   return clock.direction === "drain" ? clock.segments - clock.filled : clock.filled;
 }
 
+/** A repeating clock is never "complete": it wraps in the same write (D10). */
 export function isComplete(clock) {
-  if (clock.segments === 0) return !!clock.completedAt;
+  if (clock.onComplete === "repeat") return false;
   return clock.filled === completeValue(clock);
 }
 
-/** Current weather/state label for clocks with segment labels. */
+/** Current state label: segmentLabels[progress], clamped to the last label when a non-repeating clock is full. */
 export function currentLabel(clock) {
   if (!clock.segmentLabels?.length) return null;
   const n = clock.segmentLabels.length;
-  let idx = clock.direction === "drain" ? clock.segments - clock.filled : clock.filled;
-  if (idx >= n) idx = clock.onComplete === "repeat" ? idx % n : n - 1;
+  let idx = progress(clock);
+  if (idx >= n) idx = n - 1;
   if (idx < 0) idx = 0;
   return clock.segmentLabels[idx] ?? null;
 }
@@ -311,28 +313,6 @@ export function applyDelta(input, delta, context = {}) {
   const d = Math.trunc(Number(delta) || 0);
   if (d === 0) return { clock, events, changed: false };
 
-  // Alarms: any positive delta completes; negative re-arms.
-  if (clock.segments === 0) {
-    if (d > 0 && !clock.completedAt) {
-      clock.completedAt = context.moment ?? context.now ?? new Date().toISOString();
-      clock.dismissed = false;
-      appendLog(clock, makeLogEntry(clock, d, context));
-      events.push({ type: "advanced", delta: d, filled: 0 });
-      events.push({ type: "completed" });
-      touch(clock, context);
-      return { clock, events, changed: true };
-    }
-    if (d < 0 && clock.completedAt) {
-      clock.completedAt = null;
-      clock.dismissed = false;
-      appendLog(clock, makeLogEntry(clock, d, context));
-      events.push({ type: "advanced", delta: d, filled: 0 });
-      touch(clock, context);
-      return { clock, events, changed: true };
-    }
-    return { clock, events, changed: false };
-  }
-
   const wasComplete = isComplete(clock);
   if (wasComplete && d > 0 && (clock.onComplete === "stop" || clock.onComplete === "stayFull")) {
     return { clock, events, changed: false };
@@ -368,7 +348,7 @@ export function applyDelta(input, delta, context = {}) {
   const nowComplete = isComplete(clock);
   if (clock.onComplete === "repeat") {
     for (let i = 0; i < completions; i++) events.push({ type: "completed", repeat: true });
-    if (completions > 0) clock.completedAt = context.moment ?? context.now ?? new Date().toISOString();
+    if (completions > 0) { clock.completedAt = context.moment ?? context.now ?? new Date().toISOString(); clock.dismissed = false; }
   } else if (nowComplete && !wasComplete) {
     clock.completedAt = context.moment ?? context.now ?? new Date().toISOString();
     clock.dismissed = false;
@@ -399,16 +379,11 @@ export function setFilled(input, value, context = {}) {
   const clock = structuredClone(input);
   const target = Math.min(clock.segments, Math.max(0, Math.trunc(Number(value) || 0)));
   const prog = clock.direction === "drain" ? clock.segments - target : target;
-  const delta = prog - progress(clock);
-  if (clock.segments === 0) return { clock, events: [], changed: false };
+  let delta = prog - progress(clock);
+  if (clock.onComplete === "repeat" && delta < 0) delta += clock.segments; // move forward around the dial
   if (delta === 0) return { clock, events: [], changed: false };
-  // Use a stop-like application so set never wraps.
-  const working = { ...clock, onComplete: clock.onComplete === "repeat" ? "stop" : clock.onComplete };
-  const wasComplete = isComplete(working);
-  if (wasComplete && delta > 0) return { clock, events: [], changed: false };
-  const res = applyDelta(working, delta, { ...context, source: context.source ?? "manual" });
-  res.clock.onComplete = clock.onComplete;
-  return res;
+  if (isComplete(clock) && delta > 0) return { clock, events: [], changed: false };
+  return applyDelta(clock, delta, { ...context, source: context.source ?? "manual" });
 }
 
 /** Reset to the start value and clear completion. */
@@ -435,11 +410,8 @@ export function resetClock(input, context = {}) {
 /** Complete immediately (fill or drain to the end). */
 export function completeClock(input, context = {}) {
   if (isComplete(input)) return { clock: structuredClone(input), events: [], changed: false };
-  const rem = remaining(input);
-  const working = { ...input, onComplete: input.onComplete === "repeat" ? "stop" : input.onComplete };
-  const res = applyDelta(working, rem, context);
-  res.clock.onComplete = input.onComplete;
-  return res;
+  // For a repeating clock this completes the current cycle and wraps (D10).
+  return applyDelta(input, remaining(input), context);
 }
 
 export function dismissClock(input, context = {}) {
@@ -459,8 +431,8 @@ export function changeKind(input, kind) {
   if (clock.color === oldPreset.color) clock.color = newPreset.color;
   if (clock.onComplete === oldPreset.onComplete) clock.onComplete = newPreset.onComplete;
   if (clock.direction === oldPreset.direction) clock.direction = newPreset.direction;
-  if (kind === "alarm") { clock.segments = 0; clock.filled = 0; clock.thresholds = []; }
-  else if (clock.segments === 0) { clock.segments = newPreset.segments; clock.filled = startValue(clock); }
+  if (kind === "alarm") { clock.segments = 1; clock.filled = 0; clock.thresholds = []; clock.segmentLabels = []; }
+  else if (input.kind === "alarm") { clock.segments = newPreset.segments; clock.filled = startValue(clock); }
   if (kind === "weather" && !clock.segmentLabels.length) clock.segmentLabels = newPreset.segmentLabels.slice(0, clock.segments);
   if (kind === "threat" && !clock.thresholds.length) clock.thresholds = newPreset.thresholds.filter(t => t.at <= clock.segments);
   return normalizeClock(clock);

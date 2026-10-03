@@ -37,10 +37,10 @@ test("non-primary GM ignores trigger events; local events still run", async () =
     const clock = createClock({ kind: "project", name: "Dig", visibility: "players", segments: 4 });
     await store.writeBatch({ upsert: [clock] });
     stub.setUser("gmB");
-    const ignored = await dispatcher.dispatch({ type: "rest", kind: "long" });
+    const ignored = await dispatcher.dispatch({ type: "rest", actors: [] });
     assert.equal(ignored, null);
     assert.equal(store.getClock(clock.id).filled, 0);
-    const ran = await dispatcher.dispatch({ type: "rest", kind: "long" }, { local: true });
+    const ran = await dispatcher.dispatch({ type: "rest", actors: [] }, { local: true });
     assert.equal(ran.changed.length, 1);
     assert.equal(store.getClock(clock.id).filled, 1);
   } finally { stub.uninstall(); }
@@ -93,7 +93,7 @@ test("linked chains propagate within one batch and stop at depth 5", async () =>
     }
     await store.writeBatch({ upsert: chain });
     stub.settingWrites.length = 0;
-    await dispatcher.dispatch({ type: "rest", kind: "long" });
+    await dispatcher.dispatch({ type: "rest", actors: [] });
     const completed = chain.map(c => store.getClock(c.id).filled === 1);
     assert.deepEqual(completed, [true, true, true, true, true, true, false]);
     assert.equal(stub.settingWrites.filter(w => w.key === `${MODULE_ID}.clocks`).length, 1);
@@ -132,22 +132,73 @@ test("reveal moves a clock between stores in one operation; players never receiv
   } finally { stub.uninstall(); }
 });
 
-test("actor-bound clocks live on the actor and the index tracks them", async () => {
+test("actor-bound clocks live in the GM entry and reach owners through a read-only mirror", async () => {
+  const stub = installFoundryStub({ users: [{ id: "gmA", isGM: true, active: true }, { id: "p1", isGM: false, active: true }, { id: "p2", isGM: false, active: true }], currentUserId: "gmA" });
+  try {
+    const { store } = await load();
+    const { canView } = await import("../scripts/services/permission-service.js");
+    // p1 owns Vex; p2 can only observe Vex.
+    const actor = stub.addActor({ name: "Vex", ownership: { p1: 3, p2: 2 } });
+    const clock = createClock({ kind: "corruption", name: "Corruption", visibility: "actor-owners", actorUuid: actor.uuid, segments: 6 });
+    await store.writeBatch({ upsert: [clock] });
+
+    // Authoritative record lives in the GM-only entry; the actor carries no flags.
+    const priv = store.getPrivateEntry().getFlag(MODULE_ID, "clocks");
+    assert.equal(priv.length, 1);
+    assert.equal(priv[0].visibility, "actor-owners");
+    assert.equal(actor.getFlag(MODULE_ID, "clocks"), undefined);
+
+    // One mirror per actor, observable only by the owner.
+    const mirrors = stub.journal.contents.filter(e => e.getFlag(MODULE_ID, "mirrorFor"));
+    assert.equal(mirrors.length, 1);
+    const mirror = mirrors[0];
+    assert.equal(mirror.name, "Adventure Clocks: Vex");
+    assert.equal(mirror.ownership.default, 0);
+    assert.equal(mirror.ownership.p1, 2, "owner observes the mirror");
+    assert.equal(mirror.ownership.p2, undefined, "a mere observer of the actor gets nothing");
+    assert.equal(mirror.getFlag(MODULE_ID, "clocks")[0].id, clock.id);
+
+    stub.setUser("p1");
+    assert.equal(store.getAllClocks().length, 1, "owner reads the mirror");
+    assert.equal(canView(store.getClock(clock.id)), true);
+    stub.setUser("p2");
+    // In Foundry the mirror would not even be sent to p2; the stub returns it, so check the permission test.
+    assert.equal(canView(clock), false);
+
+    // Ownership change rebuilds the mirror; deletion of the clock removes it.
+    stub.setUser("gmA");
+    actor.ownership = { default: 0, p2: 3 };
+    await store.syncMirrors();
+    assert.equal(mirror.ownership.p1, 0);
+    assert.equal(mirror.ownership.p2, 2);
+    await store.writeBatch({ remove: [clock.id] });
+    assert.equal(stub.journal.contents.filter(e => e.getFlag(MODULE_ID, "mirrorFor")).length, 0);
+  } finally { stub.uninstall(); }
+});
+
+test("corruption clocks refuse party, loot, vehicle and hazard actors", async () => {
   const stub = installFoundryStub(stubOpts);
   try {
     const { store } = await load();
-    const actor = stub.addActor({ name: "Vex", ownership: { p1: 3 } });
-    const clock = createClock({ kind: "corruption", name: "Corruption", visibility: "actor-owners", actorUuid: actor.uuid, segments: 6 });
-    await store.writeBatch({ upsert: [clock] });
-    assert.equal(actor.getFlag(MODULE_ID, "clocks").length, 1);
-    assert.deepEqual(stub.settings.get(`${MODULE_ID}.actorIndex`), [actor.uuid]);
-    stub.setUser("p1");
-    const { canView } = await import("../scripts/services/permission-service.js");
-    assert.equal(canView(store.getClock(clock.id)), true);
-    stub.setUser("gmA");
-    await store.writeBatch({ remove: [clock.id] });
-    assert.equal(actor.getFlag(MODULE_ID, "clocks").length, 0);
-    assert.deepEqual(stub.settings.get(`${MODULE_ID}.actorIndex`), []);
+    for (const type of ["party", "loot", "vehicle", "hazard"]) assert.equal(store.isBindableActor(stub.addActor({ type })), false, type);
+    for (const type of ["character", "npc", "familiar"]) assert.equal(store.isBindableActor(stub.addActor({ type })), true, type);
+  } finally { stub.uninstall(); }
+});
+
+test("a PF2e party rest is debounced into one rest event", async () => {
+  const stub = installFoundryStub({ ...stubOpts });
+  try {
+    const { startRestService, stopRestService } = await import("../scripts/services/rest-service.js");
+    const rests = [];
+    startRestService(payload => rests.push(payload));
+    const a = stub.addActor({ name: "A" }), b = stub.addActor({ name: "B" });
+    stub.hooks.callAll("pf2e.restForTheNight", a);
+    stub.hooks.callAll("pf2e.restForTheNight", b);
+    stub.hooks.callAll("pf2e.restForTheNight", "not an actor");
+    await new Promise(r => setTimeout(r, 30));
+    assert.equal(rests.length, 1);
+    assert.deepEqual(rests[0].actors.sort(), [a.uuid, b.uuid].sort());
+    stopRestService();
   } finally { stub.uninstall(); }
 });
 

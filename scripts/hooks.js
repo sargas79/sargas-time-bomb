@@ -2,7 +2,7 @@
  * Wiring: sidebar button, document hooks that re-render, scene tracking,
  * lazily registered `hook` trigger listeners, and ownership repair.
  */
-import { CURATED_HOOKS, MODULE_ID, SETTINGS, TTA_ID } from "./constants.js";
+import { CURATED_HOOKS, FLAG_MIRROR_FOR, MODULE_ID, SETTINGS, TTA_ID } from "./constants.js";
 import { debug, getSetting, isGM, rerenderModuleApps, setSetting, t } from "./compat.js";
 import * as dispatcher from "./services/dispatcher-service.js";
 import * as store from "./services/store-service.js";
@@ -65,28 +65,32 @@ export function registerDocumentHooks() {
     if (isGM()) queueSyncHooks();
   });
   Hooks.on("updateJournalEntry", (entry, changes) => {
-    if (entry.id !== getSetting(SETTINGS.privateEntryId)) return;
+    const isPrivate = entry.id === getSetting(SETTINGS.privateEntryId);
+    const isMirror = !!entry.getFlag(MODULE_ID, FLAG_MIRROR_FOR);
+    if (!isPrivate && !isMirror) return;
     rerenderModuleApps();
-    if (isGM()) queueSyncHooks();
-    if (changes.ownership && dispatcher.isPrimaryGM()) store.repairOwnership(entry);
+    if (isPrivate && isGM()) queueSyncHooks();
+    if (isPrivate && changes.ownership && dispatcher.isPrimaryGM()) store.repairOwnership(entry);
+    // The authoritative record changed, or a mirror was edited by hand: rebuild mirrors.
+    if (dispatcher.isPrimaryGM()) queueSyncMirrors();
+  });
+  Hooks.on("createJournalEntry", entry => {
+    if (entry.getFlag(MODULE_ID, FLAG_MIRROR_FOR)) rerenderModuleApps();
   });
   Hooks.on("deleteJournalEntry", entry => {
+    if (entry.getFlag(MODULE_ID, FLAG_MIRROR_FOR)) { rerenderModuleApps(); if (dispatcher.isPrimaryGM()) queueSyncMirrors(); return; }
     if (entry.id !== getSetting(SETTINGS.privateEntryId)) return;
     if (dispatcher.isPrimaryGM()) {
       setSetting(SETTINGS.privateEntryId, "").then(() => store.ensurePrivateEntry());
     }
   });
+  // Owner mirrors follow actor ownership and existence.
   Hooks.on("updateActor", (actor, changes) => {
-    if (foundry.utils.getProperty(changes, `flags.${MODULE_ID}`) !== undefined || foundry.utils.hasProperty(changes, `flags.-=${MODULE_ID}`)) rerenderModuleApps();
+    if (changes.ownership !== undefined || changes.name !== undefined) {
+      if (dispatcher.isPrimaryGM()) queueSyncMirrors();
+    }
   });
-  Hooks.on("updateToken", (token, changes) => {
-    if (foundry.utils.hasProperty(changes, `delta.flags.${MODULE_ID}`) || foundry.utils.hasProperty(changes, `actorData.flags.${MODULE_ID}`)) rerenderModuleApps();
-  });
-  Hooks.on("deleteActor", actor => {
-    if (!dispatcher.isPrimaryGM()) return;
-    const index = getSetting(SETTINGS.actorIndex) ?? [];
-    if (index.includes(actor.uuid)) setSetting(SETTINGS.actorIndex, index.filter(u => u !== actor.uuid));
-  });
+  Hooks.on("deleteActor", () => { if (dispatcher.isPrimaryGM()) queueSyncMirrors(); });
   Hooks.on("userConnected", () => rerenderModuleApps());
 }
 
@@ -122,6 +126,12 @@ function mode() {
 /*  `hook` triggers: lazily registered listeners                       */
 /* ------------------------------------------------------------------ */
 
+let mirrorTimer = null;
+function queueSyncMirrors() {
+  clearTimeout(mirrorTimer);
+  mirrorTimer = setTimeout(() => store.syncMirrors().catch(e => debug("mirror sync failed", e)), 150);
+}
+
 let syncTimer = null;
 function queueSyncHooks() {
   clearTimeout(syncTimer);
@@ -134,7 +144,10 @@ function onHookEvent(name, args) {
   if (name === "createChatMessage") {
     const message = args[0];
     if (message?.flags?.[MODULE_ID]) return; // never react to our own cards
-    isRoll = message?.isRoll ?? (Array.isArray(message?.rolls) && message.rolls.length > 0);
+    // PF2e check rolls carry a context type (attack-roll, skill-check, saving-throw, ...).
+    const hasRoll = message?.isRoll ?? (Array.isArray(message?.rolls) && message.rolls.length > 0);
+    const pf2eContext = message?.flags?.pf2e?.context?.type;
+    isRoll = !!hasRoll && (game.system?.id !== "pf2e" || !!pf2eContext);
   }
   dispatcher.dispatch({ type: "hook", hook: name, isRoll, args: [] });
 }

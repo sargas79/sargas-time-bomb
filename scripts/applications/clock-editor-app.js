@@ -4,7 +4,7 @@
  * description and the audit log.
  */
 import {
-  APP_IDS, CURATED_HOOKS, DIRECTIONS, EVERY_UNITS, KINDS, LIMITS, LINK_WHEN, MODULE_ID, ON_COMPLETE, REST_KINDS,
+  APP_IDS, CURATED_HOOKS, DIRECTIONS, EVERY_UNITS, KINDS, LIMITS, LINK_WHEN, MODULE_ID, ON_COMPLETE,
   TRIGGER_TYPES, VISIBILITIES, VISIBILITY
 } from "../constants.js";
 import { enrich, getFormDataExtended, isGM, notify, randomID, rerenderModuleApps, sanitizeHTML, t } from "../compat.js";
@@ -45,6 +45,7 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
       addTrigger: ClockEditorApp.#onAddTrigger,
       removeTrigger: ClockEditorApp.#onRemoveTrigger,
       clearActor: ClockEditorApp.#onClearActor,
+      clearEffect: ClockEditorApp.#onClearEffect,
       fillLabels: ClockEditorApp.#onFillLabels,
       toggleLog: ClockEditorApp.#onToggleLog,
       cancel: ClockEditorApp.#onCancel
@@ -113,7 +114,6 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isHook: tr.type === "hook",
       isLinked: tr.type === "linked",
       scenes: scenes.map(s => ({ ...s, selected: tr.scenes?.includes(s.id) })),
-      restKinds: REST_KINDS.map(k => ({ value: k, label: t(`Rest.${k}`), selected: tr.kinds?.includes(k) })),
       every: { hours: tr.every?.hours ?? "", days: tr.every?.days ?? "", weeks: tr.every?.weeks ?? "" },
       repeat: !!tr.repeatEvery,
       repeatEvery: { hours: tr.repeatEvery?.hours ?? "", days: tr.repeatEvery?.days ?? "", weeks: tr.repeatEvery?.weeks ?? "" },
@@ -144,7 +144,11 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
       visibilities: VISIBILITIES.filter(v => v !== VISIBILITY.ACTOR_OWNERS || d.actorUuid).map(v => ({ value: v, label: t(`Visibility.${v}`), selected: d.visibility === v })),
       actor: actor ? { name: actor.name, uuid: d.actorUuid, img: actor.img } : null,
       segmentLabels: Array.from({ length: d.segments }, (_, i) => ({ index: i, value: d.segmentLabels[i] ?? "" })),
-      thresholds: d.thresholds.map((th, index) => ({ ...th, index })),
+      thresholds: await Promise.all(d.thresholds.map(async (th, index) => ({
+        ...th, index,
+        effectLink: th.effectUuid ? await enrich(`@UUID[${th.effectUuid}]`) : null,
+        effectName: th.effectUuid ? (globalThis.fromUuidSync?.(th.effectUuid)?.name ?? th.effectUuid) : null
+      }))),
       canAddThreshold: d.thresholds.length < LIMITS.THRESHOLDS_MAX && d.segments > 0,
       triggers,
       canAddTrigger: d.triggers.length < LIMITS.TRIGGERS_MAX,
@@ -186,8 +190,21 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const TE = foundry.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
     let data;
     try { data = TE.getDragEventData(event); } catch { return; }
-    if (data?.type !== "Actor" || !data.uuid) return;
+    if (!data?.uuid) return;
     this.#readForm();
+    if (data.type === "Item") {
+      // A PF2e condition or effect dropped on a threshold row becomes its link. Never applied automatically.
+      const row = event.target.closest?.("[data-threshold-index]");
+      if (!row) return;
+      const i = Number(row.dataset.thresholdIndex);
+      if (this.#draft.thresholds[i]) this.#draft.thresholds[i].effectUuid = data.uuid;
+      this.render();
+      return;
+    }
+    if (data.type !== "Actor") return;
+    const actor = store.resolveActor(data.uuid);
+    if (!actor) return;
+    if (!store.isBindableActor(actor)) { notify("warn", t("Notify.actorTypeRefused", { name: actor.name, type: actor.type })); return; }
     this.#draft.actorUuid = data.uuid;
     if (this.#draft.kind === "corruption") this.#draft.visibility = VISIBILITY.ACTOR_OWNERS;
     this.render();
@@ -215,7 +232,7 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     if (obj.segmentLabels !== undefined) d.segmentLabels = toArray(obj.segmentLabels).map(v => String(v ?? ""));
     if (obj.thresholds !== undefined) {
-      d.thresholds = toArray(obj.thresholds).map(th => ({ at: Number(th.at), label: th.label ?? "", note: th.note ?? "" }));
+      d.thresholds = toArray(obj.thresholds).map((th, i) => ({ at: Number(th.at), label: th.label ?? "", note: th.note ?? "", effectUuid: th.effectUuid || d.thresholds[i]?.effectUuid || null }));
     }
     if (obj.triggers !== undefined) {
       const list = toArray(obj.triggers);
@@ -226,7 +243,6 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const mode = raw.advanceMode ?? "steps";
         out.advance = mode === "complete" ? "complete" : mode === "reset" ? "reset" : Number(raw.advanceSteps ?? prev.advance ?? 1);
         if (type === "scene") out.scenes = asList(raw.scenes);
-        if (type === "rest") out.kinds = asList(raw.kinds);
         if (type === "time") {
           out.every = {};
           for (const u of EVERY_UNITS) if (raw.every?.[u] !== "" && raw.every?.[u] !== undefined) out.every[u] = Number(raw.every[u]);
@@ -288,7 +304,7 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
     let at = 1;
     while (used.has(at) && at <= d.segments) at++;
     if (at > d.segments) return;
-    d.thresholds.push({ at, label: "", note: "" });
+    d.thresholds.push({ at, label: "", note: "", effectUuid: null });
     d.thresholds.sort((a, b) => a.at - b.at);
     this.render();
   }
@@ -330,6 +346,13 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
   }
 
+  static #onClearEffect(event, target) {
+    this.#readForm();
+    const i = Number(target.dataset.index);
+    if (this.#draft.thresholds[i]) this.#draft.thresholds[i].effectUuid = null;
+    this.render();
+  }
+
   static #onFillLabels() {
     this.#readForm();
     const preset = kindDefaults("weather").segmentLabels ?? [];
@@ -365,9 +388,7 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
     clock.updatedAt = now;
     if (this.#isNew) clock.createdAt ??= now;
     await dispatcher.saveClock(clock);
-    if (this.#isNew) {
-      try { await globalThis.game.modules.get(MODULE_ID)?.api?.syncHookListeners?.(); } catch { /* ignore */ }
-    }
+    try { await globalThis.game.modules.get(MODULE_ID)?.api?.syncHookListeners?.(); } catch { /* ignore */ }
     notify("info", t(this.#isNew ? "Notify.created" : "Notify.saved", { name: clock.name }));
     this.#isNew = false;
     rerenderModuleApps();

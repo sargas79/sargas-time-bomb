@@ -57,9 +57,7 @@ export function triggerText(trigger, { clocks = [], info = timeInfo() } = {}) {
         ? t("Trigger.sceneListed", { adv, scenes: trigger.scenes.map(sceneName).join(", ") })
         : t("Trigger.sceneAny", { adv });
     case "rest":
-      return trigger.kinds?.length
-        ? t("Trigger.restKinds", { adv, kinds: trigger.kinds.map(k => t(`Rest.${k}`)).join(", ") })
-        : t("Trigger.restAny", { adv });
+      return t("Trigger.rest", { adv });
     case "time":
       return t(trigger.once ? "Trigger.timeOnce" : "Trigger.timeEvery", { adv, every: everyText(trigger.every) });
     case "date": {
@@ -101,7 +99,7 @@ export function nextText(clock, { clocks = [], info = timeInfo() } = {}) {
 export function stateText(clock) {
   const label = currentLabel(clock);
   if (label) return label;
-  if (clock.segments === 0) {
+  if (clock.kind === "alarm") {
     if (isComplete(clock)) return t("State.alarmFired");
     return t("State.alarmArmed");
   }

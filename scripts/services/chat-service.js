@@ -2,7 +2,7 @@
  * Chat cards for clock changes.
  */
 import { MODULE_ID, SETTINGS, VISIBILITY } from "../constants.js";
-import { getSetting, renderTemplate, t, warn } from "../compat.js";
+import { enrich, getSetting, renderTemplate, t, warn } from "../compat.js";
 import { currentLabel, isComplete, reachedThreshold, remaining } from "./clock-service.js";
 import { recipientsFor } from "./permission-service.js";
 import { renderPie } from "../ui/pie.js";
@@ -25,10 +25,12 @@ export function describeEvents(clock, events) {
   for (const ev of events) {
     switch (ev.type) {
       case "advanced":
-        if (clock.segments === 0) lines.push(t(ev.delta > 0 ? "Card.alarmFired" : "Card.alarmArmed"));
+        if (clock.kind === "alarm") lines.push(t(ev.delta > 0 ? "Card.alarmFired" : "Card.alarmArmed"));
         else lines.push(t(ev.delta > 0 ? "Card.advanced" : "Card.retreated", { delta: Math.abs(ev.delta), filled: ev.filled, segments: clock.segments }));
         break;
-      case "thresholdReached": lines.push(t("Card.thresholdReached", { label: ev.threshold.label || t("Card.unnamedThreshold"), at: ev.threshold.at })); break;
+      case "thresholdReached":
+        lines.push(t("Card.thresholdReached", { label: ev.threshold.label || t("Card.unnamedThreshold"), at: ev.threshold.at }));
+        break;
       case "thresholdCleared": lines.push(t("Card.thresholdCleared", { label: ev.threshold.label || t("Card.unnamedThreshold"), at: ev.threshold.at })); break;
       case "completed": lines.push(t(ev.repeat ? "Card.completedRepeat" : "Card.completed")); break;
       case "reset": lines.push(t(ev.automatic ? "Card.resetAuto" : "Card.reset")); break;
@@ -53,6 +55,12 @@ export async function postCards(groups, ctx = {}) {
   if (ctx.source === "catchup" && allowed.length > 1) return postSummary(allowed, ctx, ChatMessage);
   for (const { clock, events, source } of allowed) {
     const whisper = recipientsFor(clock);
+    const reached = events.filter(e => e.type === "thresholdReached").map(e => e.threshold);
+    const effects = [];
+    for (const th of reached) {
+      if (th.effectUuid) effects.push({ label: th.label, link: await enrich(`@UUID[${th.effectUuid}]`), note: th.note });
+      else if (th.note) effects.push({ label: th.label, link: null, note: th.note });
+    }
     const data = {
       clock,
       pie: renderPie(clock, { size: 72 }),
@@ -65,6 +73,7 @@ export async function postCards(groups, ctx = {}) {
       remaining: remaining(clock),
       stateLabel: currentLabel(clock),
       threshold: reachedThreshold(clock),
+      effects,
       isGMOnly: clock.visibility === VISIBILITY.GM_ONLY
     };
     let content;

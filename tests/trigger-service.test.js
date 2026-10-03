@@ -16,18 +16,16 @@ test("scene trigger: any scene, listed scenes, same-scene re-activation ignored"
   assert.equal(evaluate(listed, { type: "scene", sceneId: "s9" }).delta, 1);
 });
 
-test("rest trigger with kinds filter and advance keywords", () => {
+test("rest trigger and advance keywords", () => {
   const any = mk([{ id: "t", type: "rest", advance: 1 }]);
-  assert.equal(evaluate(any, { type: "rest", kind: "short" }).delta, 1);
-  const long = mk([{ id: "t", type: "rest", advance: 1, kinds: ["long"] }]);
-  assert.equal(evaluate(long, { type: "rest", kind: "short" }).delta, 0);
-  assert.equal(evaluate(long, { type: "rest", kind: "long" }).delta, 1);
+  assert.equal(evaluate(any, { type: "rest", actors: ["Actor.a", "Actor.b"] }).delta, 1, "a party rest is one rest");
+  assert.equal(evaluate(any, { type: "scene", sceneId: "s" }).delta, 0);
   const comp = mk([{ id: "t", type: "rest", advance: "complete" }]);
-  const r = evaluate(comp, { type: "rest", kind: "long" });
+  const r = evaluate(comp, { type: "rest", actors: [] });
   assert.equal(r.complete, true);
   assert.deepEqual(r.matched, ["t"]);
   const reset = mk([{ id: "t", type: "rest", advance: "reset" }]);
-  assert.equal(evaluate(reset, { type: "rest", kind: "long" }).reset, true);
+  assert.equal(evaluate(reset, { type: "rest" }).reset, true);
 });
 
 test("time trigger buckets elapsed seconds with carry across events", () => {
@@ -113,7 +111,7 @@ test("checkLinkChain detects cycles and depth", () => {
 });
 
 test("describeTrigger returns i18n keys", () => {
-  assert.equal(describeTrigger({ type: "rest" }).key, "restAny");
+  assert.equal(describeTrigger({ type: "rest" }).key, "rest");
   assert.equal(describeTrigger({ type: "time", every: { hours: 6 } }).key, "timeEvery");
   assert.equal(describeTrigger({ type: "date", repeatEvery: { days: 1 } }).key, "dateRepeat");
   assert.equal(describeTrigger({}).key, "unknown");

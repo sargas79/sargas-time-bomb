@@ -39,8 +39,7 @@ export function matchesScene(trigger, event) {
 }
 
 export function matchesRest(trigger, event) {
-  if (trigger.kinds?.length && !trigger.kinds.includes(event.kind)) return false;
-  return true;
+  return trigger.type === "rest" && event.type === "rest";
 }
 
 export function matchesHook(trigger, event) {
@@ -164,7 +163,7 @@ export function checkLinkChain(clockId, allClocks, maxDepth = LIMITS.LINK_DEPTH_
 export function describeTrigger(trigger) {
   switch (trigger?.type) {
     case "scene": return { key: trigger.scenes?.length ? "sceneListed" : "sceneAny", data: { count: trigger.scenes?.length ?? 0, advance: trigger.advance } };
-    case "rest": return { key: trigger.kinds?.length ? "restKinds" : "restAny", data: { kinds: (trigger.kinds ?? []).join(", "), advance: trigger.advance } };
+    case "rest": return { key: "rest", data: { advance: trigger.advance } };
     case "time": {
       const parts = [];
       for (const [unit, n] of Object.entries(trigger.every ?? {})) parts.push({ unit, n });

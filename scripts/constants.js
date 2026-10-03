@@ -21,7 +21,7 @@ export const EXPORT_FORMAT_VERSION = 1;
 
 /** Bounds enforced by validation-service. */
 export const LIMITS = Object.freeze({
-  SEGMENTS_MIN: 0,
+  SEGMENTS_MIN: 1,
   SEGMENTS_MAX: 48,
   THRESHOLDS_MAX: 12,
   TRIGGERS_MAX: 8,
@@ -93,11 +93,23 @@ export const CURATED_HOOKS = Object.freeze([
   { key: "combatRound", hook: "combatRound" },
   { key: "combatStart", hook: "combatStart" },
   { key: "deleteCombat", hook: "deleteCombat" },
+  { key: "pf2eStartTurn", hook: "pf2e.startTurn" },
+  { key: "pf2eEndTurn", hook: "pf2e.endTurn" },
   { key: "createChatMessage", hook: "createChatMessage", filter: "roll" },
   { key: "pauseGame", hook: "pauseGame" }
 ]);
 
-export const REST_KINDS = Object.freeze(["short", "long"]);
+/** PF2e hooks this module relies on. Names are verified at runtime against the installed system. */
+export const PF2E_HOOKS = Object.freeze({
+  restForTheNight: "pf2e.restForTheNight",
+  startTurn: "pf2e.startTurn",
+  endTurn: "pf2e.endTurn"
+});
+
+export const SYSTEM_ID = "pf2e";
+
+/** Actor types a corruption clock may be bound to. Party, loot, vehicle and hazard are refused. */
+export const BINDABLE_ACTOR_TYPES = Object.freeze(["character", "npc", "familiar"]);
 
 /** Hooks this module emits. */
 export const HOOKS = Object.freeze({
@@ -115,7 +127,6 @@ export const SETTINGS = Object.freeze({
   state: "state",
   privateEntryId: "privateEntryId",
   folderId: "folderId",
-  actorIndex: "actorIndex",
   registeredHooks: "registeredHooks",
   timeSource: "timeSource",
   restDebounceSeconds: "restDebounceSeconds",
@@ -135,9 +146,11 @@ export const SCENE_TRIGGER_MODES = Object.freeze(["activate", "view"]);
 export const DENSITIES = Object.freeze(["compact", "comfortable"]);
 
 export const PRIVATE_ENTRY_NAME = "Adventure Clocks (GM only)";
+export const MIRROR_ENTRY_PREFIX = "Adventure Clocks: ";
 export const FOLDER_NAME = "Adventure Clocks";
 
 export const FLAG_CLOCKS = "clocks";
+export const FLAG_MIRROR_FOR = "mirrorFor";
 
 export const APP_IDS = Object.freeze({
   board: "stb-board",

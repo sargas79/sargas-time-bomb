@@ -115,10 +115,12 @@ export function buildAPI(timeHandlers = {}) {
       return persist({ ...clock, visibility: VISIBILITY.GM_ONLY }, { isNew: false });
     },
 
-    declareRest(options = {}) {
+    declareRest({ actors = [] } = {}) {
       requireGM();
-      return declareRest(options);
+      return declareRest({ actors });
     },
+    syncMirrors() { requireGM(); return store.syncMirrors(); },
+    isBindableActor: store.isBindableActor,
 
     /** Re-evaluate elapsed time now (catch-up) on this client if it is the primary GM. */
     async evaluateNow() {

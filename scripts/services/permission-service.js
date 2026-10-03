@@ -30,6 +30,8 @@ export function canView(clock, user = globalThis.game?.user) {
   switch (clock.visibility) {
     case VISIBILITY.PLAYERS: return true;
     case VISIBILITY.ACTOR_OWNERS: {
+      // Players see these through a read-only mirror entry that only the
+      // actor's owners can observe; the actor permission is the same test.
       const actor = resolveActor(clock.actorUuid);
       if (!actor) return false;
       const level = globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;

@@ -1,8 +1,16 @@
 {
   "STB": {
     "Settings": {
-      "boardMenu": { "name": "Clock board", "label": "Open clock board", "hint": "Open the Adventure Clocks board." },
-      "hooksMenu": { "name": "Registered hooks", "label": "Review hooks", "hint": "List every Foundry hook currently used by a clock trigger, so free-text hooks can be audited and removed." },
+      "boardMenu": {
+        "name": "Clock board",
+        "label": "Open clock board",
+        "hint": "Open the Adventure Clocks board."
+      },
+      "hooksMenu": {
+        "name": "Registered hooks",
+        "label": "Review hooks",
+        "hint": "List every Foundry hook currently used by a clock trigger, so free-text hooks can be audited and removed."
+      },
       "timeSource": {
         "name": "Time source",
         "hint": "Where elapsed campaign time comes from. Auto uses Through the Ages when it is active and falls back to Foundry world time otherwise.",
@@ -17,8 +25,14 @@
         "activate": "A scene is activated",
         "view": "The GM views a scene"
       },
-      "restDebounceSeconds": { "name": "Rest debounce (seconds)", "hint": "Systems that report a rest per character are folded into one rest if the reports arrive within this window." },
-      "catchUpOnConnect": { "name": "Catch up on connect", "hint": "When the first GM connects, evaluate any campaign time that passed since the last processed moment and post one summary." },
+      "restDebounceSeconds": {
+        "name": "Rest debounce (seconds)",
+        "hint": "Systems that report a rest per character are folded into one rest if the reports arrive within this window."
+      },
+      "catchUpOnConnect": {
+        "name": "Catch up on connect",
+        "hint": "When the first GM connects, evaluate any campaign time that passed since the last processed moment and post one summary."
+      },
       "chatCards": {
         "name": "Chat cards",
         "hint": "Post a chat card when a clock changes. GM-only clocks are whispered to GMs.",
@@ -26,50 +40,126 @@
         "visible-only": "Player-visible clocks only",
         "all": "All clocks (GM-only whispered)"
       },
-      "showBoardToPlayers": { "name": "Show board button to players", "hint": "Adds the Clocks button to the Journal sidebar for players. They only ever see clocks they are allowed to see." },
-      "playerBoardDensity": { "name": "Board density", "hint": "How compact the clock board is on this client.", "compact": "Compact", "comfortable": "Comfortable" },
-      "debugLogging": { "name": "Debug logging", "hint": "Write verbose diagnostics to the console on this client." }
+      "showBoardToPlayers": {
+        "name": "Show board button to players",
+        "hint": "Adds the Clocks button to the Journal sidebar for players. They only ever see clocks they are allowed to see."
+      },
+      "playerBoardDensity": {
+        "name": "Board density",
+        "hint": "How compact the clock board is on this client.",
+        "compact": "Compact",
+        "comfortable": "Comfortable"
+      },
+      "debugLogging": {
+        "name": "Debug logging",
+        "hint": "Write verbose diagnostics to the console on this client."
+      }
     },
-
     "Kind": {
-      "progress": "Progress", "countdown": "Countdown", "threat": "Looming threat", "faction": "Faction progress",
-      "corruption": "Corruption", "alarm": "Alarm", "project": "Project", "weather": "Weather front"
+      "progress": "Progress",
+      "countdown": "Countdown",
+      "threat": "Looming threat",
+      "faction": "Faction progress",
+      "corruption": "Corruption",
+      "alarm": "Alarm",
+      "project": "Project",
+      "weather": "Weather front"
     },
     "KindHint": {
       "progress": "A Blades-style pie that fills forward and stops when full.",
       "countdown": "A pie that drains, or a deadline on a calendar date.",
       "threat": "A progress clock with an escalation ladder. Crossing a threshold posts a card.",
       "faction": "A progress clock tagged to a faction; link it to a rival to race.",
-      "corruption": "A per-character clock stored on the actor and visible to its owners.",
-      "alarm": "Fires at a campaign moment or after elapsed time. No segments.",
+      "corruption": "A per-character clock bound to a PF2e character, NPC or familiar; its owners see it read-only. Thresholds may link a condition or effect for the GM to apply by hand.",
+      "alarm": "Fires at a campaign moment or after elapsed time. A single segment drawn as a badge; repeat to re-arm.",
       "project": "Long-term work measured in rests or campaign days.",
-      "weather": "A repeating clock whose segments are named states."
+      "weather": "A repeating clock whose segments are named states; one label per segment."
     },
-    "Direction": { "fill": "Fill", "drain": "Drain" },
-    "OnComplete": { "stop": "Stop when complete", "reset": "Reset to start", "repeat": "Repeat (wrap around)", "stayFull": "Stay full" },
-    "Visibility": { "gm-only": "GM only", "players": "Players", "actor-owners": "Actor owners" },
-    "TriggerType": { "scene": "Scene change", "rest": "Rest", "time": "Elapsed time", "date": "Calendar date", "hook": "Foundry hook", "linked": "Linked clock" },
-    "Rest": { "short": "short rest", "long": "long rest" },
-    "LinkWhen": { "completed": "completes", "threshold": "reaches a threshold" },
+    "Direction": {
+      "fill": "Fill",
+      "drain": "Drain"
+    },
+    "OnComplete": {
+      "stop": "Stop when complete",
+      "reset": "Reset to start",
+      "repeat": "Repeat (wrap around)",
+      "stayFull": "Stay full"
+    },
+    "Visibility": {
+      "gm-only": "GM only",
+      "players": "Players",
+      "actor-owners": "Actor owners (read-only mirror)"
+    },
+    "TriggerType": {
+      "scene": "Scene change",
+      "rest": "Rest",
+      "time": "Elapsed time",
+      "date": "Calendar date",
+      "hook": "Foundry hook",
+      "linked": "Linked clock"
+    },
+    "LinkWhen": {
+      "completed": "completes",
+      "threshold": "reaches a threshold"
+    },
     "Hook": {
-      "combatRound": "Combat round", "combatStart": "Combat starts", "deleteCombat": "Combat ends",
-      "createChatMessage": "Dice roll posted", "pauseGame": "Game paused or unpaused", "custom": "Custom hook name…"
+      "combatRound": "Combat round",
+      "combatStart": "Combat starts",
+      "deleteCombat": "Combat ends",
+      "createChatMessage": "PF2e check roll posted",
+      "pauseGame": "Game paused or unpaused",
+      "custom": "Custom hook name…",
+      "pf2eStartTurn": "PF2e: turn starts",
+      "pf2eEndTurn": "PF2e: turn ends"
     },
-    "Unit": { "weeks": "weeks", "days": "days", "hours": "hours", "day": "Day", "month": "Month", "year": "Year", "hour": "Hour", "minute": "Minute" },
-    "Every": { "weeks": "{n} wk", "days": "{n} d", "hours": "{n} h", "none": "never" },
-    "Advance": { "steps": "Advance by", "complete": "Complete", "reset": "Reset" },
-    "Span": { "days": "{n} d", "hours": "{n} h", "minutes": "{n} min", "now": "now" },
-    "Relative": { "now": "now", "in": "in {span}", "ago": "{span} ago" },
+    "Unit": {
+      "weeks": "weeks",
+      "days": "days",
+      "hours": "hours",
+      "day": "Day",
+      "month": "Month",
+      "year": "Year",
+      "hour": "Hour",
+      "minute": "Minute"
+    },
+    "Every": {
+      "weeks": "{n} wk",
+      "days": "{n} d",
+      "hours": "{n} h",
+      "none": "never"
+    },
+    "Advance": {
+      "steps": "Advance by",
+      "complete": "Complete",
+      "reset": "Reset"
+    },
+    "Span": {
+      "days": "{n} d",
+      "hours": "{n} h",
+      "minutes": "{n} min",
+      "now": "now"
+    },
+    "Relative": {
+      "now": "now",
+      "in": "in {span}",
+      "ago": "{span} ago"
+    },
     "Source": {
-      "manual": "manual", "scene": "scene change", "rest": "rest", "time": "elapsed time", "date": "calendar date",
-      "hook": "hook", "linked": "linked clock", "import": "import", "catchup": "catch-up", "declared": "declared rest", "api": "API"
+      "manual": "manual",
+      "scene": "scene change",
+      "rest": "rest",
+      "time": "elapsed time",
+      "date": "calendar date",
+      "hook": "hook",
+      "linked": "linked clock",
+      "import": "import",
+      "catchup": "catch-up",
+      "declared": "declared rest",
+      "api": "API"
     },
-
     "Trigger": {
       "sceneAny": "{adv} on any scene change",
       "sceneListed": "{adv} when the active scene becomes {scenes}",
-      "restAny": "{adv} at rest",
-      "restKinds": "{adv} at a {kinds}",
       "timeEvery": "{adv} every {every}",
       "timeOnce": "{adv} once, after {every}",
       "dateOnce": "{adv} on {when} ({rel})",
@@ -81,7 +171,8 @@
       "linkedThreshold": "{adv} when “{name}” reaches threshold {at}",
       "anyThreshold": "any threshold",
       "unknownClock": "(missing clock)",
-      "unknown": "Unknown trigger"
+      "unknown": "Unknown trigger",
+      "rest": "{adv} at rest"
     },
     "Next": {
       "manual": "advances manually",
@@ -89,23 +180,28 @@
       "dateNoCalendar": "needs a calendar (Through the Ages)"
     },
     "State": {
-      "alarmFired": "Fired", "alarmArmed": "Armed", "full": "Full", "complete": "Complete",
-      "restsRemaining": "{n} rests remaining", "remaining": "{n} remaining", "progress": "{filled} / {segments}"
+      "alarmFired": "Fired",
+      "alarmArmed": "Armed",
+      "full": "Full",
+      "complete": "Complete",
+      "restsRemaining": "{n} rests remaining",
+      "remaining": "{n} remaining",
+      "progress": "{filled} / {segments}"
     },
-
     "Board": {
       "title": "Adventure Clocks",
       "button": "Clocks",
       "search": "Search clocks…",
-      "filterKind": "Filter by kind", "allKinds": "All kinds",
-      "filterVisibility": "Filter by visibility", "allVisibilities": "All visibilities",
-      "filterActor": "Filter by actor", "allActors": "All actors",
+      "filterKind": "Filter by kind",
+      "allKinds": "All kinds",
+      "filterVisibility": "Filter by visibility",
+      "allVisibilities": "All visibilities",
+      "filterActor": "Filter by actor",
+      "allActors": "All actors",
       "toggleCompleted": "Show or hide completed manual clocks",
       "clearFilters": "Clear filters",
       "newClock": "New clock",
       "more": "More…",
-      "declareLongRest": "Declare long rest",
-      "declareShortRest": "Declare short rest",
       "evaluateNow": "Evaluate elapsed time now",
       "export": "Export clocks…",
       "import": "Import clocks…",
@@ -115,15 +211,22 @@
       "primaryIs": "{name} evaluates triggers",
       "count": "{shown} of {total}",
       "ungrouped": "Ungrouped",
-      "empty": "No clocks yet. Create one, or drop an actor here to start a corruption clock.",
+      "empty": "No clocks yet. Create one, or drop a character onto the board to start a corruption clock.",
       "emptyFiltered": "No clocks match the current filters.",
-      "dropHint": "Drop an actor onto the board to create a corruption clock for it.",
+      "dropHint": "Drop a character, NPC or familiar onto the board to create a corruption clock for it.",
       "ttaRecommended": "Install Through the Ages for calendar deadlines, alarms on dates and date-stamped logs.",
       "openClock": "Open",
       "alarmExpired": "Alarm fired",
-      "minusOne": "Move back one", "plusOne": "Advance one",
-      "dismiss": "Dismiss alarm", "setExact": "Set exact value", "complete": "Complete now", "reset": "Reset",
-      "reveal": "Reveal to players", "hide": "Hide from players", "edit": "Edit", "delete": "Delete",
+      "minusOne": "Move back one",
+      "plusOne": "Advance one",
+      "dismiss": "Dismiss alarm",
+      "setExact": "Set exact value",
+      "complete": "Complete now",
+      "reset": "Reset",
+      "reveal": "Reveal to players",
+      "hide": "Hide from players",
+      "edit": "Edit",
+      "delete": "Delete",
       "deleteTitle": "Delete clock",
       "deleteConfirm": "Delete “{name}”? This cannot be undone.",
       "setExactTitle": "Set filled segments",
@@ -133,48 +236,84 @@
       "tokenActors": "Token actors",
       "importTitle": "Import clocks",
       "importHint": "Paste an export, or choose a file. Imported clocks get new ids unless you keep them; linked triggers inside the import are remapped.",
-      "importFile": "File", "importText": "JSON", "importKeepIds": "Keep original ids where they do not collide",
-      "importButton": "Import"
+      "importFile": "File",
+      "importText": "JSON",
+      "importKeepIds": "Keep original ids where they do not collide",
+      "importButton": "Import",
+      "declareRest": "Declare rest (party)"
     },
-
     "Editor": {
-      "title": "Clock", "titleNew": "New clock", "titleEdit": "Edit: {name}",
+      "title": "Clock",
+      "titleNew": "New clock",
+      "titleEdit": "Edit: {name}",
       "fixErrors": "Please fix the following before saving:",
-      "name": "Name", "kind": "Kind", "group": "Group", "groupPlaceholder": "Faction, region, arc…",
-      "color": "Colour", "icon": "Icon",
-      "segments": "Segments", "filled": "Filled", "direction": "Direction",
-      "segmentLabels": "Segment labels", "fillLabels": "fill with weather presets",
-      "behaviour": "Behaviour", "onComplete": "On completion", "visibility": "Visible to",
-      "actor": "Actor", "actorHint": "Drop an actor here (or on the board) to bind this clock to it.",
+      "name": "Name",
+      "kind": "Kind",
+      "group": "Group",
+      "groupPlaceholder": "Faction, region, arc…",
+      "color": "Colour",
+      "icon": "Icon",
+      "segments": "Segments",
+      "filled": "Filled",
+      "direction": "Direction",
+      "segmentLabels": "Segment labels",
+      "fillLabels": "fill with weather presets",
+      "behaviour": "Behaviour",
+      "onComplete": "On completion",
+      "visibility": "Visible to",
+      "actor": "Actor",
+      "actorHint": "Drop an actor here (or on the board) to bind this clock to it.",
       "remove": "Remove",
-      "thresholds": "Thresholds", "thresholdAt": "At segment", "thresholdLabel": "Label", "thresholdNote": "Note (shown on the card)",
-      "noThresholds": "No thresholds.", "addThreshold": "Add threshold",
-      "triggers": "Triggers", "triggersHint": "Leave empty for a manual clock. Every trigger moves the clock by the given amount, completes it, or resets it.",
+      "thresholds": "Thresholds",
+      "thresholdAt": "At segment",
+      "thresholdLabel": "Label",
+      "thresholdNote": "Note (shown on the card)",
+      "noThresholds": "No thresholds.",
+      "addThreshold": "Add threshold",
+      "triggers": "Triggers",
+      "triggersHint": "Leave empty for a manual clock. Every trigger moves the clock by the given amount, completes it, or resets it.",
       "advance": "Effect",
-      "scenes": "Scenes", "scenesHint": "Leave empty for any scene.",
-      "restKinds": "Rest kinds", "restKindsHint": "Leave empty for any rest.",
-      "every": "Every", "once": "only once",
+      "scenes": "Scenes",
+      "scenesHint": "Leave empty for any scene.",
+      "every": "Every",
+      "once": "only once",
       "timeWorldHint": "Without a campaign calendar, elapsed time is measured from Foundry world time.",
-      "dateAt": "Date", "repeatEvery": "Repeat every",
-      "hook": "Hook", "hookHint": "Hooks are never evaluated as code. Free-text hooks are listed under Module Settings → Registered hooks.",
+      "dateAt": "Date",
+      "repeatEvery": "Repeat every",
+      "hook": "Hook",
+      "hookHint": "Hooks are never evaluated as code. Free-text hooks are listed under Module Settings → Registered hooks.",
       "linkedClock": "When clock",
       "addTrigger": "Add trigger",
       "noCalendarHint": "Calendar-date triggers need Through the Ages (or another calendar time source). Elapsed-time triggers still work from world time.",
       "description": "Description",
-      "log": "Audit log", "noLog": "No changes recorded yet.",
-      "close": "Close", "cancel": "Cancel", "create": "Create", "save": "Save"
+      "log": "Audit log",
+      "noLog": "No changes recorded yet.",
+      "close": "Close",
+      "cancel": "Cancel",
+      "create": "Create",
+      "save": "Save",
+      "restHint": "Fires once per Rest for the Night (all resting party members count as one rest) and on “Declare rest”.",
+      "effectHint": "Drop a PF2e condition or effect onto a threshold to link it. The link is shown on the card for the GM to drag onto the actor; nothing is applied automatically.",
+      "actorTypes": "Characters, NPCs and familiars only."
     },
-    "Log": { "when": "When", "source": "Source", "who": "Who", "delta": "Change", "filled": "Filled" },
-
+    "Log": {
+      "when": "When",
+      "source": "Source",
+      "who": "Who",
+      "delta": "Change",
+      "filled": "Filled"
+    },
     "Hooks": {
       "title": "Registered hooks",
       "hint": "Every Foundry hook named by a hook trigger is listened to lazily. Remove one to delete that trigger from every clock.",
       "empty": "No hook triggers are in use.",
-      "hook": "Hook", "usedBy": "Used by", "curated": "curated", "custom": "custom",
+      "hook": "Hook",
+      "usedBy": "Used by",
+      "curated": "curated",
+      "custom": "custom",
       "remove": "Remove this hook from every clock",
       "removed": "Removed hook {hook} from {n} clock(s)."
     },
-
     "Card": {
       "speaker": "Adventure Clocks",
       "advanced": "Advanced {delta} → {filled} / {segments}",
@@ -191,7 +330,6 @@
       "unnamedThreshold": "unnamed",
       "catchupTitle": "While no GM was online"
     },
-
     "Notify": {
       "gmOnly": "Only a GM can change clocks.",
       "notPrimary": "Another GM client is the primary executor; ask them to evaluate, or wait for them to disconnect.",
@@ -199,14 +337,14 @@
       "saved": "Saved clock “{name}”.",
       "invalid": "The clock has {n} problem(s). See the editor.",
       "corruptionExists": "{name} already has a corruption clock; opening it.",
-      "restDeclared": "Declared a {kind}.",
+      "restDeclared": "Declared a rest for {n} player character(s).",
       "evaluated": "Evaluated elapsed time: {n} clock(s) changed.",
       "imported": "Imported {n} clock(s); skipped {skipped}.",
       "importFailed": "Import failed: {reason}",
       "rewind": "Campaign time moved backwards ({from} → {to}). Clocks were not un-ticked; adjust manually if needed.",
-      "rewindWorldTime": "World time moved backwards. Clocks were not un-ticked; adjust manually if needed."
+      "rewindWorldTime": "World time moved backwards. Clocks were not un-ticked; adjust manually if needed.",
+      "actorTypeRefused": "“{name}” is a {type} actor; corruption clocks can only be bound to characters, NPCs and familiars."
     },
-
     "Error": {
       "clockInvalid": "Not a clock.",
       "kind": "Unknown kind.",
@@ -214,7 +352,6 @@
       "nameLength": "Name is longer than {max} characters.",
       "descriptionLength": "Description is longer than {max} characters.",
       "segmentsRange": "Segments must be between {min} and {max}.",
-      "segmentsZero": "Only alarms may have zero segments.",
       "filledRange": "Filled must be between 0 and the number of segments.",
       "direction": "Unknown direction.",
       "onComplete": "Unknown completion behaviour.",
@@ -245,7 +382,11 @@
       "importNewer": "The file uses export format {format}; this version supports {supported}.",
       "importNewerSchema": "The file uses schema {schemaVersion}; this version supports {supported}.",
       "importNoClocks": "The file contains no clocks.",
-      "importTooMany": "Importing would exceed the limit of {max} clocks."
+      "importTooMany": "Importing would exceed the limit of {max} clocks.",
+      "alarmSegments": "An alarm has exactly one segment.",
+      "repeatAtFull": "A repeating clock cannot rest at its complete value; it wraps to the start.",
+      "segmentLabelsCount": "Segment labels must be empty or exactly one per segment ({segments}).",
+      "thresholdEffect": "A threshold's effect link is not a valid UUID."
     }
   }
 }

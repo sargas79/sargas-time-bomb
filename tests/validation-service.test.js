@@ -18,9 +18,16 @@ test("bounds are enforced", () => {
   assert.ok(codes(r).includes("filledRange"));
   assert.ok(codes(r).includes("nameRequired"));
   const zero = { ...createClock({ kind: "progress", name: "z" }), segments: 0, filled: 0 };
-  assert.ok(codes(validateClock(zero)).includes("segmentsZero"));
+  assert.ok(codes(validateClock(zero)).includes("segmentsRange"));
   const alarm = createClock({ kind: "alarm", name: "a" });
   assert.ok(validateClock(alarm).valid);
+  assert.ok(codes(validateClock({ ...alarm, segments: 2 })).includes("alarmSegments"));
+  const rep = { ...createClock({ kind: "progress", name: "r", segments: 4, onComplete: "repeat" }), filled: 4 };
+  assert.ok(codes(validateClock(rep)).includes("repeatAtFull"));
+  const labels = { ...createClock({ kind: "weather", name: "w" }), segmentLabels: ["a", "b"] };
+  assert.ok(codes(validateClock(labels)).includes("segmentLabelsCount"));
+  const effect = { ...createClock({ kind: "progress", name: "e", segments: 4 }), thresholds: [{ at: 2, label: "", note: "", effectUuid: "bad uuid!" }] };
+  assert.ok(codes(validateClock(effect)).includes("thresholdEffect"));
 });
 
 test("threshold order, duplicates and range", () => {

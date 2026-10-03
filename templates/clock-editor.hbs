@@ -75,7 +75,7 @@
       {{#if actor}}
         <span class="stb-actor__chip"><img src="{{actor.img}}" alt=""> {{actor.name}} {{#unless readonly}}<button type="button" data-action="clearActor" title="{{stbT 'Editor.remove'}}"><i class="fa-solid fa-xmark"></i></button>{{/unless}}</span>
       {{else}}
-        <span class="hint">{{stbT 'Editor.actorHint'}}</span>
+        <span class="hint">{{stbT 'Editor.actorHint'}}</span>{{#if isCorruption}} <span class="hint">{{stbT 'Editor.actorTypes'}}</span>{{/if}}
       {{/if}}
     </div>
   </fieldset>

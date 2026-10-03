@@ -1,10 +1,12 @@
 /**
- * Storage: player-visible clocks in a world setting, GM-only clocks as flags on
- * a journal entry nobody owns, actor-bound clocks as flags on the actor.
- * All writes are serialised through one WriteQueue. Foundry globals are only
- * touched inside functions.
+ * Storage: player-visible clocks in a world setting; GM-only and actor-bound
+ * clocks as flags on a journal entry nobody owns. Actor-bound clocks reach the
+ * actor's owners through read-only mirror entries (one per actor) that only
+ * those owners can observe. Mirrors are written only by the primary GM and are
+ * never read back as truth. All writes are serialised through one WriteQueue.
+ * Foundry globals are only touched inside functions.
  */
-import { FLAG_CLOCKS, FOLDER_NAME, MODULE_ID, PRIVATE_ENTRY_NAME, SETTINGS, VISIBILITY } from "../constants.js";
+import { BINDABLE_ACTOR_TYPES, FLAG_CLOCKS, FLAG_MIRROR_FOR, FOLDER_NAME, MIRROR_ENTRY_PREFIX, MODULE_ID, PRIVATE_ENTRY_NAME, SETTINGS, VISIBILITY } from "../constants.js";
 import { debug, getSetting, setSetting, warn } from "../compat.js";
 import { compareClocks } from "./clock-service.js";
 import { defaultState, migrateClocks, migrateState } from "./migration-service.js";
@@ -34,7 +36,10 @@ export function readPrivateClocks() {
   const entry = getPrivateEntry();
   if (!entry) return [];
   const raw = entry.getFlag(MODULE_ID, FLAG_CLOCKS) ?? [];
-  return migrateClocks(raw).clocks.map(c => ({ ...c, visibility: VISIBILITY.GM_ONLY }));
+  return migrateClocks(raw).clocks.map(c => ({
+    ...c,
+    visibility: c.visibility === VISIBILITY.ACTOR_OWNERS && c.actorUuid ? VISIBILITY.ACTOR_OWNERS : VISIBILITY.GM_ONLY
+  }));
 }
 
 export function resolveActor(uuid) {
@@ -50,31 +55,34 @@ export function resolveActor(uuid) {
   }
 }
 
-function actorUuids() {
-  const set = new Set(getSetting(SETTINGS.actorIndex) ?? []);
-  // Self-heal: any world actor carrying our flag is included even if the index lost it.
-  for (const a of game().actors?.contents ?? []) {
-    if (a.getFlag(MODULE_ID, FLAG_CLOCKS)?.length) set.add(a.uuid);
-  }
-  return [...set];
+/** Is this actor one a corruption clock may be bound to? */
+export function isBindableActor(actor) {
+  return !!actor && BINDABLE_ACTOR_TYPES.includes(actor.type);
 }
 
-export function readActorClocks() {
+/** Mirror entries this client can see (players: only those they observe). */
+export function mirrorEntries() {
+  return (game().journal?.contents ?? []).filter(e => !!e.getFlag(MODULE_ID, FLAG_MIRROR_FOR));
+}
+
+/**
+ * Actor-bound clocks as a player sees them: from the read-only mirrors. GMs read
+ * the authoritative record from the private entry instead (readPrivateClocks).
+ */
+export function readMirroredClocks() {
+  if (game().user?.isGM) return [];
   const out = [];
-  for (const uuid of actorUuids()) {
-    const actor = resolveActor(uuid);
-    if (!actor) continue;
-    const raw = actor.getFlag(MODULE_ID, FLAG_CLOCKS) ?? [];
-    for (const c of migrateClocks(raw).clocks) {
-      out.push({ ...c, visibility: VISIBILITY.ACTOR_OWNERS, actorUuid: c.actorUuid || uuid });
-    }
+  for (const entry of mirrorEntries()) {
+    const uuid = entry.getFlag(MODULE_ID, FLAG_MIRROR_FOR);
+    const raw = entry.getFlag(MODULE_ID, FLAG_CLOCKS) ?? [];
+    for (const c of migrateClocks(raw).clocks) out.push({ ...c, visibility: VISIBILITY.ACTOR_OWNERS, actorUuid: c.actorUuid || uuid, readonly: true });
   }
   return out;
 }
 
 /** Every clock this client can read, sorted for the board. */
 export function getAllClocks() {
-  const all = [...readPublicClocks(), ...readPrivateClocks(), ...readActorClocks()];
+  const all = [...readPublicClocks(), ...readPrivateClocks(), ...readMirroredClocks()];
   const seen = new Set();
   return all.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true; }).sort(compareClocks);
 }
@@ -92,9 +100,7 @@ export function getState() {
 /* ------------------------------------------------------------------ */
 
 function storeKeyFor(clock) {
-  if (clock.visibility === VISIBILITY.PLAYERS) return "public";
-  if (clock.visibility === VISIBILITY.ACTOR_OWNERS) return `actor:${clock.actorUuid}`;
-  return "private";
+  return clock.visibility === VISIBILITY.PLAYERS ? "public" : "private";
 }
 
 function stripForStorage(clock) {
@@ -119,10 +125,7 @@ async function performWrite({ upsert = [], remove = [], state = null } = {}) {
   const stores = new Map(); // key -> { list: clock[], dirty }
   const ensure = key => {
     if (!stores.has(key)) {
-      let list;
-      if (key === "public") list = readPublicClocks();
-      else if (key === "private") list = readPrivateClocks();
-      else list = readActorClocks().filter(c => `actor:${c.actorUuid}` === key);
+      const list = key === "public" ? readPublicClocks() : readPrivateClocks();
       stores.set(key, { list: [...list], dirty: false });
     }
     return stores.get(key);
@@ -150,35 +153,27 @@ async function performWrite({ upsert = [], remove = [], state = null } = {}) {
   }
 
   const results = [];
+  let privateTouched = false;
   for (const [key, s] of stores) {
     if (!s.dirty) continue;
     if (key === "public") {
       results.push(await setSetting(SETTINGS.clocks, s.list));
-    } else if (key === "private") {
+    } else {
       const entry = await ensurePrivateEntry();
       if (!entry) { warn("No private journal entry available; GM-only clocks were not saved."); continue; }
       results.push(await entry.update({ [`flags.${MODULE_ID}.${FLAG_CLOCKS}`]: s.list }));
-    } else {
-      const uuid = key.slice("actor:".length);
-      const actor = resolveActor(uuid);
-      if (!actor) { warn(`Actor ${uuid} not found; its clocks were not saved.`); continue; }
-      results.push(await actor.update({ [`flags.${MODULE_ID}.${FLAG_CLOCKS}`]: s.list }));
-      await updateActorIndex(uuid, s.list.length > 0);
+      privateTouched = true;
     }
   }
+  // Owner mirrors follow the authoritative record. Other GM clients rebuild
+  // them too when they see the private entry change (hooks.js), if primary.
+  if (privateTouched && isPrimaryGMLocal()) await syncMirrorsNow();
   if (state) {
     const merged = { ...getState(), ...state };
     results.push(await setSetting(SETTINGS.state, merged));
   }
   debug("write", { upsert: upsert.map(c => c.id), remove, stores: [...stores.keys()], state });
   return results;
-}
-
-async function updateActorIndex(uuid, present) {
-  const index = new Set(getSetting(SETTINGS.actorIndex) ?? []);
-  const had = index.has(uuid);
-  if (present) index.add(uuid); else index.delete(uuid);
-  if (had !== present) await setSetting(SETTINGS.actorIndex, [...index]);
 }
 
 export function saveState(partial) {
@@ -248,6 +243,94 @@ export async function repairOwnership(entry) {
     warn("Repairing ownership of the GM-only clock entry.");
     await entry.update({ ownership: { ...ownership, ...fixes } });
   }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Owner mirrors                                                      */
+/* ------------------------------------------------------------------ */
+
+function isPrimaryGMLocal() {
+  const g = game();
+  if (!g.user?.isGM) return false;
+  const ids = (g.users?.contents ?? []).filter(u => u.active && u.isGM).map(u => u.id).sort();
+  return ids[0] === g.user.id;
+}
+
+/** Ownership a mirror must carry: nobody by default, OBSERVER for each non-GM owner of the actor. */
+export function mirrorOwnershipFor(actor) {
+  const L = ownershipLevels();
+  const ownership = { default: L.NONE };
+  for (const user of game().users?.contents ?? []) {
+    if (user.isGM) continue;
+    let owns = false;
+    try { owns = actor.testUserPermission(user, L.OWNER); } catch { owns = false; }
+    if (owns) ownership[user.id] = L.OBSERVER;
+  }
+  return ownership;
+}
+
+function sameOwnership(a, b) {
+  const ka = Object.keys(a ?? {}).filter(k => (a[k] ?? 0) !== 0).sort();
+  const kb = Object.keys(b ?? {}).filter(k => (b[k] ?? 0) !== 0).sort();
+  if (ka.length !== kb.length || (a?.default ?? 0) !== (b?.default ?? 0)) return false;
+  return ka.every((k, i) => k === kb[i] && a[k] === b[k]);
+}
+
+/** Rebuild every owner mirror from the authoritative record. Serialised; GM only. */
+export function syncMirrors() {
+  return writeQueue.enqueue(() => syncMirrorsNow());
+}
+
+async function syncMirrorsNow() {
+  const g = game();
+  if (!g.user?.isGM) return false;
+  const JournalEntry = globalThis.JournalEntry ?? globalThis.foundry?.documents?.JournalEntry;
+  const byActor = new Map();
+  for (const c of readPrivateClocks()) {
+    if (c.visibility !== VISIBILITY.ACTOR_OWNERS || !c.actorUuid) continue;
+    if (!byActor.has(c.actorUuid)) byActor.set(c.actorUuid, []);
+    byActor.get(c.actorUuid).push(c);
+  }
+  const existing = new Map(mirrorEntries().map(e => [e.getFlag(MODULE_ID, FLAG_MIRROR_FOR), e]));
+  let changed = false;
+
+  for (const [uuid, clocks] of byActor) {
+    const actor = resolveActor(uuid);
+    const entry = existing.get(uuid);
+    if (!actor) {
+      if (entry) { await entry.delete(); changed = true; }
+      continue;
+    }
+    const name = `${MIRROR_ENTRY_PREFIX}${actor.name}`;
+    const ownership = mirrorOwnershipFor(actor);
+    const payload = clocks.map(c => ({ ...c, log: [] }));
+    if (!entry) {
+      if (!JournalEntry?.create) continue;
+      const folder = await ensureFolder();
+      await JournalEntry.create({
+        name, folder: folder?.id ?? null, ownership,
+        flags: { [MODULE_ID]: { managed: true, [FLAG_MIRROR_FOR]: uuid, [FLAG_CLOCKS]: payload } }
+      });
+      changed = true;
+      continue;
+    }
+    const update = {};
+    if (entry.name !== name) update.name = name;
+    if (!sameOwnership(entry.ownership, ownership)) {
+      // Replace, not merge: stale per-user grants must go.
+      update.ownership = { ...Object.fromEntries(Object.keys(entry.ownership ?? {}).filter(k => k !== "default").map(k => [k, ownershipLevels().NONE])), ...ownership };
+    }
+    if (JSON.stringify(entry.getFlag(MODULE_ID, FLAG_CLOCKS) ?? []) !== JSON.stringify(payload)) update[`flags.${MODULE_ID}.${FLAG_CLOCKS}`] = payload;
+    if (Object.keys(update).length) { await entry.update(update); changed = true; }
+  }
+  // Mirrors whose actor has no clocks left.
+  for (const [uuid, entry] of existing) {
+    if (byActor.has(uuid)) continue;
+    await entry.delete();
+    changed = true;
+  }
+  if (changed) debug("mirrors synced", [...byActor.keys()]);
+  return changed;
 }
 
 /* ------------------------------------------------------------------ */

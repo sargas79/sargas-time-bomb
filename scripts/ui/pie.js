@@ -30,10 +30,11 @@ export function renderPie(clock, { size = 64, title = null } = {}) {
   const parts = [];
   parts.push(`<svg class="stb-pie${complete ? " stb-pie--complete" : ""}" viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="${label}" data-segments="${n}" data-filled="${clock.filled | 0}">`);
   parts.push(`<title>${label}</title>`);
-  if (n === 0) {
-    // Alarm: a bell-ish ring, lit when fired.
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r}" class="stb-pie__ring" fill="${complete ? color : "none"}" stroke="${color}" stroke-width="6" opacity="${complete ? 1 : 0.6}"/>`);
-    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r / 3}" fill="${color}" opacity="${complete ? 1 : 0.35}"/>`);
+  if (clock.kind === "alarm") {
+    // Alarm: a badge rather than a pie. Lit when the single segment is filled.
+    const fired = clock.filled >= 1;
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r}" class="stb-pie__ring${fired ? " is-filled" : ""}" fill="${fired ? color : "none"}" stroke="${color}" stroke-width="6" opacity="${fired ? 1 : 0.6}"/>`);
+    parts.push(`<path d="M50 24 a14 14 0 0 1 14 14 v12 l6 8 h-40 l6 -8 v-12 a14 14 0 0 1 14 -14 z M44 62 a6 6 0 0 0 12 0 z" fill="${fired ? "#fff" : color}" opacity="${fired ? 1 : 0.5}"/>`);
   } else if (n === 1) {
     parts.push(`<circle cx="${cx}" cy="${cy}" r="${r}" class="stb-pie__segment${clock.filled >= 1 ? " is-filled" : ""}" fill="${clock.filled >= 1 ? color : "transparent"}" stroke="currentColor" stroke-width="1.5"/>`);
   } else {
@@ -54,7 +55,7 @@ export function renderPie(clock, { size = 64, title = null } = {}) {
   if (stateLabel && size >= 48) {
     parts.push(`<circle cx="${cx}" cy="${cy}" r="22" class="stb-pie__hub" fill="var(--stb-pie-hub, rgba(0,0,0,.55))"/>`);
     parts.push(`<text x="${cx}" y="${cy}" class="stb-pie__text" text-anchor="middle" dominant-baseline="central" font-size="11">${escapeHTML(stateLabel.slice(0, 8))}</text>`);
-  } else if (n > 0 && size >= 48) {
+  } else if (n > 1 && size >= 48) {
     parts.push(`<circle cx="${cx}" cy="${cy}" r="18" class="stb-pie__hub" fill="var(--stb-pie-hub, rgba(0,0,0,.55))"/>`);
     parts.push(`<text x="${cx}" y="${cy}" class="stb-pie__text" text-anchor="middle" dominant-baseline="central" font-size="16">${clock.filled | 0}/${n}</text>`);
   }

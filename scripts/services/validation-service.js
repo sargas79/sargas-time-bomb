@@ -63,8 +63,14 @@ export function validateClock(clock, { allClocks = [], calendar = null, isNew = 
 
   if (!Number.isInteger(clock.segments) || clock.segments < LIMITS.SEGMENTS_MIN || clock.segments > LIMITS.SEGMENTS_MAX) {
     errors.push(err("segmentsRange", "segments", { min: LIMITS.SEGMENTS_MIN, max: LIMITS.SEGMENTS_MAX }));
-  } else if (clock.segments === 0 && clock.kind !== "alarm") {
-    errors.push(err("segmentsZero", "segments"));
+  } else if (clock.kind === "alarm" && clock.segments !== 1) {
+    errors.push(err("alarmSegments", "segments"));
+  }
+  if (clock.onComplete === "repeat" && Number.isInteger(clock.segments) && clock.filled === (clock.direction === "drain" ? 0 : clock.segments)) {
+    errors.push(err("repeatAtFull", "filled"));
+  }
+  if (Array.isArray(clock.segmentLabels) && clock.segmentLabels.length && clock.segmentLabels.length !== clock.segments) {
+    errors.push(err("segmentLabelsCount", "segmentLabels", { segments: clock.segments }));
   }
   if (!Number.isInteger(clock.filled) || clock.filled < 0 || clock.filled > clock.segments) errors.push(err("filledRange", "filled"));
   if (!DIRECTIONS.includes(clock.direction)) errors.push(err("direction", "direction"));
@@ -82,6 +88,9 @@ export function validateClock(clock, { allClocks = [], calendar = null, isNew = 
     seen.add(t.at);
     if (t.at < last) errors.push(err("thresholdOrder", `thresholds.${i}.at`));
     last = t.at;
+    if (t.effectUuid !== null && t.effectUuid !== undefined && !(typeof t.effectUuid === "string" && /^[\w.-]+$/.test(t.effectUuid))) {
+      errors.push(err("thresholdEffect", `thresholds.${i}.effectUuid`));
+    }
   });
 
   const triggers = Array.isArray(clock.triggers) ? clock.triggers : [];

@@ -27,6 +27,7 @@ if (manifest.id !== "sargas-time-bomb") note(`module.json: id must be "sargas-ti
 if (!/^\d+\.\d+\.\d+$/.test(manifest.version ?? "")) note(`module.json: version "${manifest.version}" is not semver`);
 if (!manifest.compatibility?.minimum || !manifest.compatibility?.verified) note("module.json: compatibility.minimum and .verified are required");
 if (manifest.socket) note("module.json: socket must stay false (D5: no module socket in 1.0)");
+if (!manifest.relationships?.systems?.some(s => s.id === "pf2e")) note("module.json: relationships.systems must declare pf2e (D3)");
 
 const referenced = [
   ...(manifest.esmodules ?? []),

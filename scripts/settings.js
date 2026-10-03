@@ -18,7 +18,6 @@ export function registerSettings({ BoardMenu, HooksMenu, onTimeSourceChange, onD
   S.register(MODULE_ID, SETTINGS.state, { scope: "world", config: false, type: Object, default: {} });
   S.register(MODULE_ID, SETTINGS.privateEntryId, { scope: "world", config: false, type: String, default: "" });
   S.register(MODULE_ID, SETTINGS.folderId, { scope: "world", config: false, type: String, default: "" });
-  S.register(MODULE_ID, SETTINGS.actorIndex, { scope: "world", config: false, type: Array, default: [] });
   S.register(MODULE_ID, SETTINGS.registeredHooks, { scope: "world", config: false, type: Array, default: [] });
 
   // Menus.
