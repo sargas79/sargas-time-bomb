@@ -4,7 +4,7 @@
  */
 import { HOOKS, LIMITS, MODULE_ID } from "../constants.js";
 import { currentUserId, debug, notify, t, warn } from "../compat.js";
-import { applyDelta, completeClock, dismissClock, isComplete, resetClock, setFilled } from "./clock-service.js";
+import { annotateClock, applyDelta, completeClock, dismissClock, isComplete, resetClock, setFilled } from "./clock-service.js";
 import { applyTriggerUpdates, evaluate } from "./trigger-service.js";
 import * as store from "./store-service.js";
 
@@ -87,6 +87,7 @@ async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
       case "reset": res = resetClock(clock, c); break;
       case "complete": res = completeClock(clock, c); break;
       case "dismiss": res = dismissClock(clock, c); break;
+      case "note": res = annotateClock(clock, op.value, c); break;
       default: continue;
     }
     record(clock.id, res, c.source);

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  applyDelta, changeKind, completeClock, createClock, currentLabel, isComplete, lastChange, nextLabel, normalizeClock,
+  annotateClock, applyDelta, changeKind, completeClock, createClock, currentLabel, isComplete, lastChange, nextLabel, normalizeClock,
   reachedThreshold, remaining, resetClock, setFilled
 } from "../scripts/services/clock-service.js";
 import { LIMITS } from "../scripts/constants.js";
@@ -214,4 +214,15 @@ test("changeKind swaps presets only where untouched", () => {
   const custom = changeKind({ ...c, icon: "fa-solid fa-cat" }, "weather");
   assert.equal(custom.icon, "fa-solid fa-cat");
   assert.equal(custom.segmentLabels.length, 6);
+});
+
+test("annotateClock appends a zero-delta note without moving the clock", () => {
+  const c = createClock({ kind: "corruption", name: "C", actorUuid: "Actor.a", segments: 6, filled: 2 });
+  const r = annotateClock(c, "  Dreams of the deep  ", { ...ctx, source: "proposal", userId: "p1" });
+  assert.equal(r.changed, true);
+  assert.equal(r.clock.filled, 2);
+  assert.equal(r.clock.log[0].note, "Dreams of the deep");
+  assert.equal(r.clock.log[0].delta, 0);
+  assert.equal(r.clock.log[0].userId, "p1");
+  assert.equal(annotateClock(c, "   ", ctx).changed, false);
 });

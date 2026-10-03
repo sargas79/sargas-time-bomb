@@ -70,6 +70,22 @@ players* on. Their board lists clocks with visibility **Players**, plus
 **Actor owners** clocks for actors they own. There are no controls; opening a
 card shows a read-only view.
 
+### Proposals
+
+With *Allow player proposals* on, a player may **Propose +1** on a project
+clock whose owner they are, and **Propose note** on a corruption clock bound to
+an actor they own. Nothing changes until a GM approves it from the queue at the
+top of the board; the player sees "pending" on the card and gets a whispered
+card when the GM approves or rejects. An approved +1 is logged as an approved
+proposal with the proposer's name; an approved note is added to the clock's
+audit log.
+
+The request travels on the proposing user's own User document, exactly as
+Through the Ages relays player notes, so the GM's client knows who asked from
+the server rather than from the payload. When Through the Ages is active its
+relay is used; otherwise an equivalent built-in transport runs. There is no
+module socket.
+
 ## Triggers
 
 | Trigger | Fires when | Notes |
@@ -120,6 +136,7 @@ un-ticks a clock: the GM is told once and may adjust manually.
 | View *GM only* clocks | ✓ | — |
 | Create, edit, delete, advance, reveal, hide, import | ✓ | — |
 | Export | all clocks | visible clocks only |
+| Propose +1 on an owned project, or a note on an owned corruption clock | — | ✓ when the GM allows proposals (GM approves) |
 
 ## Storage
 
@@ -151,6 +168,7 @@ triggers per clock, a 50-entry audit log per clock.
 | Catch up on connect | world | on |
 | Chat cards | world | Player-visible clocks only |
 | Show board button to players | world | on |
+| Allow player proposals | world | off |
 | Board density | client | Compact |
 | Debug logging | client | off |
 

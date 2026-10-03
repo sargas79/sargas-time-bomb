@@ -57,6 +57,23 @@
     <span class="stb-board__count">{{stbT 'Board.count' shown=shown total=total}}</span>
   </div>
 
+  {{#if isGM}}{{#if pendingProposals.length}}
+    <section class="stb-proposals">
+      <h3 class="stb-proposals__header"><i class="fa-solid fa-inbox"></i> {{stbT 'Proposal.queue' n=pendingProposals.length}}</h3>
+      <ul class="stb-proposals__list">
+        {{#each pendingProposals}}
+          <li class="stb-proposals__item" data-proposal-id="{{id}}">
+            <span class="stb-proposals__who">{{userName}}</span>
+            <span class="stb-proposals__what">{{description}}{{#if text}}: <em>{{text}}</em>{{/if}}</span>
+            <span class="stb-proposals__when">{{when}}</span>
+            <button type="button" data-action="approveProposal" data-proposal-id="{{id}}" title="{{stbT 'Proposal.approve'}}"><i class="fa-solid fa-check"></i></button>
+            <button type="button" data-action="rejectProposal" data-proposal-id="{{id}}" class="stb-danger" title="{{stbT 'Proposal.reject'}}"><i class="fa-solid fa-xmark"></i></button>
+          </li>
+        {{/each}}
+      </ul>
+    </section>
+  {{/if}}{{/if}}
+
   <section class="stb-board__groups">
     {{#if groups.length}}
       {{#each groups}}

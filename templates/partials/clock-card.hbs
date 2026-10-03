@@ -22,6 +22,12 @@
     {{#if next}}<div class="stb-card__next"><i class="fa-regular fa-clock"></i> {{next}}</div>{{/if}}
     {{#if lastChangeText}}<div class="stb-card__last">{{lastChangeText}}</div>{{/if}}
     {{#if expired}}<div class="stb-card__expired"><i class="fa-solid fa-bell"></i> {{stbT 'Board.alarmExpired'}}{{#if completedAt}} · {{completedAt}}{{/if}}</div>{{/if}}
+    {{#if pendingCount}}<div class="stb-card__meta stb-card__pending"><i class="fa-solid fa-inbox"></i> {{stbT 'Proposal.pending' n=pendingCount}}</div>{{/if}}
+    {{#unless canControl}}{{#if canProposeAdvance}}{{#if canProposeNote}}{{else}}
+      <div class="stb-card__controls"><button type="button" data-action="proposeAdvance" {{#if pendingCount}}disabled{{/if}}><i class="fa-solid fa-plus"></i> {{stbT 'Proposal.proposeAdvance'}}</button></div>
+    {{/if}}{{else}}{{#if canProposeNote}}
+      <div class="stb-card__controls"><button type="button" data-action="proposeNote"><i class="fa-solid fa-comment"></i> {{stbT 'Proposal.proposeNote'}}</button></div>
+    {{/if}}{{/if}}{{/unless}}
     {{#if canControl}}
       <div class="stb-card__controls">
         <button type="button" data-action="retreat" data-delta="1" {{#unless canRetreat}}disabled{{/unless}} title="{{stbT 'Board.minusOne'}}"><i class="fa-solid fa-minus"></i></button>

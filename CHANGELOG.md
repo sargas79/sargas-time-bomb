@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Player proposals** (off by default, *Allow player proposals*): a player may
+  propose +1 on a project they own or a note on their own corruption clock.
+  The GM approves or rejects from a queue on the board; the player is told by
+  whisper. Requests travel on the proposing user's own User document, through
+  Through the Ages' relay when it is active or an equivalent built-in
+  transport otherwise. Never a module socket.
+
+### Added
 - Board cards show when a clock last changed, by what and by whom; labelled
   clocks preview the next state and offer a "set state by name" picker; a
   clock whose actor is gone says so.

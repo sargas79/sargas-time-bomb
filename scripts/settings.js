@@ -20,6 +20,7 @@ export function registerSettings({ BoardMenu, HooksMenu, onTimeSourceChange, onD
   S.register(MODULE_ID, SETTINGS.folderId, { scope: "world", config: false, type: String, default: "" });
   S.register(MODULE_ID, SETTINGS.registeredHooks, { scope: "world", config: false, type: Array, default: [] });
   S.register(MODULE_ID, SETTINGS.collapsedGroups, { scope: "client", config: false, type: Array, default: [] });
+  S.register(MODULE_ID, SETTINGS.proposals, { scope: "world", config: false, type: Array, default: [], onChange: () => rerenderModuleApps() });
 
   // Menus.
   if (BoardMenu) {
@@ -68,6 +69,11 @@ export function registerSettings({ BoardMenu, HooksMenu, onTimeSourceChange, onD
     name: "STB.Settings.chatCards.name", hint: "STB.Settings.chatCards.hint",
     scope: "world", config: true, type: String, default: "visible-only",
     choices: choices("chatCards", CHAT_CARD_MODES)
+  });
+  S.register(MODULE_ID, SETTINGS.allowProposals, {
+    name: "STB.Settings.allowProposals.name", hint: "STB.Settings.allowProposals.hint",
+    scope: "world", config: true, type: Boolean, default: false,
+    onChange: () => rerenderModuleApps()
   });
   S.register(MODULE_ID, SETTINGS.showBoardToPlayers, {
     name: "STB.Settings.showBoardToPlayers.name", hint: "STB.Settings.showBoardToPlayers.hint",
