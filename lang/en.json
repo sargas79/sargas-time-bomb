@@ -317,7 +317,8 @@
       "actorTypes": "Characters, NPCs and familiars only.",
       "groupFaction": "Faction name (required)",
       "owner": "Owner",
-      "ownerHint": "Shown on the card. Player proposals arrive in 1.1."
+      "ownerHint": "Shown on the card. Player proposals arrive in 1.1.",
+      "ownerUnknown": "Unknown user ({id})"
     },
     "Log": {
       "when": "When",

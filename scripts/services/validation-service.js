@@ -80,8 +80,9 @@ export function validateClock(clock, { allClocks = [], calendar = null, isNew = 
   if (!ON_COMPLETE.includes(clock.onComplete)) errors.push(err("onComplete", "onComplete"));
   if (!VISIBILITIES.includes(clock.visibility)) errors.push(err("visibility", "visibility"));
   if (clock.visibility === VISIBILITY.ACTOR_OWNERS && !clock.actorUuid) errors.push(err("actorRequired", "actorUuid"));
-  if (clock.actorUuid && actorType !== undefined && !BINDABLE_ACTOR_TYPES.includes(actorType)) {
-    errors.push(err("actorType", "actorUuid", { type: actorType ?? "missing" }));
+  // actorType is only known to Foundry-side callers; null/undefined means "unknown", not "wrong".
+  if (clock.actorUuid && typeof actorType === "string" && !BINDABLE_ACTOR_TYPES.includes(actorType)) {
+    errors.push(err("actorType", "actorUuid", { type: actorType }));
   }
   if (clock.kind === "faction" && !(typeof clock.group === "string" && clock.group.trim())) errors.push(err("factionGroup", "group"));
 

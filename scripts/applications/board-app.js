@@ -408,7 +408,9 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!clock?.segmentLabels?.length) return;
     const Dialog = getDialogV2();
     if (!Dialog) return;
-    const current = clock.direction === "drain" ? clock.segments - clock.filled : clock.filled;
+    const n = clock.segmentLabels.length;
+    const progressNow = clock.direction === "drain" ? clock.segments - clock.filled : clock.filled;
+    const current = Math.min(progressNow, n - 1); // a full non-repeating clock displays its last label
     const options = clock.segmentLabels.map((l, i) => `<option value="${i}" ${i === current ? "selected" : ""}>${foundry.utils.escapeHTML(l || String(i))}</option>`).join("");
     const idx = await Dialog.prompt({
       window: { title: t("Board.setStateTitle") },
@@ -417,7 +419,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
       rejectClose: false,
       modal: true
     });
-    if (idx === null || idx === undefined || Number.isNaN(idx)) return;
+    if (idx === null || idx === undefined || Number.isNaN(idx) || idx === current) return; // same state: nothing to do
     const filled = clock.direction === "drain" ? clock.segments - idx : idx;
     await dispatcher.manual(clock.id, "set", filled);
   }
@@ -450,9 +452,11 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }, { idGen: () => randomID() });
     const a = mk(idA, data.a, data.a, idB);
     const b = mk(idB, data.b, data.b, idA);
-    const all = [...store.getAllClocks(), a, b];
-    for (const c of [a, b]) {
-      const v = validateClock(c, { allClocks: all, isNew: true });
+    const existing = store.getAllClocks();
+    // Each clock is validated against the existing set plus its twin only, so
+    // the clock-count limit counts the pair once.
+    for (const [c, twin] of [[a, b], [b, a]]) {
+      const v = validateClock(c, { allClocks: [...existing, twin], isNew: true });
       if (!v.valid) { notify("error", t("Notify.invalid", { n: v.errors.length })); return; }
     }
     await store.writeBatch({ upsert: [a, b] });

@@ -118,9 +118,9 @@ export function stateText(clock) {
       const per = Number(restTrigger.advance) > 0 ? Number(restTrigger.advance) : 1;
       return t("State.restsRemaining", { n: Math.ceil(n / per) });
     }
-    const timeTrigger = clock.triggers?.find(tr => tr.type === "time" && tr.every);
+    const timeTrigger = clock.triggers?.find(tr => tr.type === "time" && tr.every && !tr.once && Number.isInteger(tr.advance) && tr.advance > 0);
     if (timeTrigger) {
-      const per = Number(timeTrigger.advance) > 0 ? Number(timeTrigger.advance) : 1;
+      const per = timeTrigger.advance;
       const periods = Math.ceil(n / per);
       const days = Number(timeTrigger.every.days) || 0;
       if (days && !timeTrigger.every.hours && !timeTrigger.every.weeks) return t("State.daysRemaining", { n: periods * days });

@@ -75,7 +75,7 @@ test("faction clocks need a group; bound actors must be a bindable type when res
   assert.ok(validateClock(c).valid, "type unknown to pure code passes");
   assert.ok(validateClock(c, { actorType: "character" }).valid);
   assert.ok(codes(validateClock(c, { actorType: "party" })).includes("actorType"));
-  assert.ok(codes(validateClock(c, { actorType: null })).includes("actorType"), "missing actor");
+  assert.ok(validateClock(c, { actorType: null }).valid, "unresolvable actor is unknown, not wrong");
 });
 
 test("clock count limit applies to new clocks", () => {

@@ -141,7 +141,14 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isCorruption: d.kind === "corruption",
       isProject: d.kind === "project",
       isFaction: d.kind === "faction",
-      owners: (globalThis.game.users?.contents ?? []).filter(u => !u.isGM).map(u => ({ id: u.id, name: u.name, selected: u.id === d.ownerUserId })),
+      owners: (() => {
+        const users = globalThis.game.users?.contents ?? [];
+        const list = users.filter(u => !u.isGM).map(u => ({ id: u.id, name: u.name, selected: u.id === d.ownerUserId }));
+        if (d.ownerUserId && !list.some(o => o.id === d.ownerUserId)) {
+          list.push({ id: d.ownerUserId, name: users.find(u => u.id === d.ownerUserId)?.name ?? t("Editor.ownerUnknown", { id: d.ownerUserId }), selected: true });
+        }
+        return list;
+      })(),
       directions: DIRECTIONS.map(v => ({ value: v, label: t(`Direction.${v}`), selected: d.direction === v })),
       onCompleteOptions: ON_COMPLETE.map(v => ({ value: v, label: t(`OnComplete.${v}`), selected: d.onComplete === v })),
       visibilities: VISIBILITIES.filter(v => v !== VISIBILITY.ACTOR_OWNERS || d.actorUuid).map(v => ({ value: v, label: t(`Visibility.${v}`), selected: d.visibility === v })),
@@ -379,7 +386,10 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const clock = this.#draft;
     const info = timeInfo();
     const all = store.getAllClocks();
-    const actorType = clock.actorUuid ? (store.resolveActor(clock.actorUuid)?.type ?? null) : undefined;
+    // Only judge the actor type when the actor resolves; an orphaned binding is
+    // reported on the card, not blocked here, so the GM can still edit or unbind.
+    const boundActor = clock.actorUuid ? store.resolveActor(clock.actorUuid) : null;
+    const actorType = boundActor ? boundActor.type : undefined;
     const result = validateClock(clock, { allClocks: all, calendar: info.calendar, isNew: this.#isNew, actorType });
     if (!result.valid) {
       this.#errors = result.errors;
