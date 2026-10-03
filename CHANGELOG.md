@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-03
+
 ### Added
 - Rest triggers may opt in to Through the Ages' **Next adventure day** (its
   `timeChanged` reason, TTA 2.2+), so a project ticks when the party wakes
