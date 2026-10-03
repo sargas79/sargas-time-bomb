@@ -36,11 +36,16 @@ function momentKey(m) {
  * Elapsed time is measured from the stored "last processed" marker, never from
  * the previous hook payload, so bursts and missed events cannot lose time.
  */
-async function onTimeChange({ moment, worldTime, source, reconfigured = false, structureChanged = false, reason = null }, { catchUp = false } = {}) {
+async function onTimeChange({ moment, worldTime, source, reconfigured = false, reason = null, adventureDayOnly = false }, { catchUp = false } = {}) {
   if (!dispatcher.isPrimaryGM()) return null;
   if (source === "off") return null; // time triggers disabled by setting
   const info = timeInfo();
   if (info.sourceId === "off") return null;
+
+  // The reason for an already-processed move arrived late: count the rest only.
+  if (adventureDayOnly) {
+    return dispatcher.runBatch({ events: [{ type: "rest", actors: [], source: "adventureDay" }], context: { moment, worldTime, source: "rest" } });
+  }
   const state = store.getState();
   const stamp = { lastProcessedMoment: moment ?? state.lastProcessedMoment ?? null, lastProcessedWorldTime: worldTime ?? state.lastProcessedWorldTime ?? null };
 
@@ -48,13 +53,10 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false, s
     if (!moment) return null;
     const from = state.lastProcessedMoment;
     if (!from) { await store.saveState(stamp); return null; }
-    // Prefer TTA's own arithmetic (2.2+) so a deadline and an elapsed step agree with the calendar exactly.
-    const a = info.momentToSeconds(from), b = info.momentToSeconds(moment);
-    const seconds = Number.isFinite(a) && Number.isFinite(b) ? b - a : elapsedSeconds(from, moment, info.calendar);
-    if (reconfigured) {
-      rerenderModuleApps();
-      if (structureChanged) await reportInvalidDeadlines(info);
-    }
+    // One arithmetic for both ends (TTA's own when it exposes it) so a mixed sum cannot fake a rewind.
+    const span = info.elapsedBetween(from, moment);
+    const seconds = Number.isFinite(span) ? span : elapsedSeconds(from, moment, info.calendar);
+    if (reconfigured) rerenderModuleApps();
     if (seconds === 0) return null;
     if (seconds < 0) {
       const key = momentKey(moment);
@@ -96,9 +98,13 @@ async function onTimeChange({ moment, worldTime, source, reconfigured = false, s
   });
 }
 
-/** After a structural calendar change, name the clocks whose stored deadlines no longer exist. */
-async function reportInvalidDeadlines(info) {
-  if (!info.calendar) return;
+/**
+ * After a structural calendar change, name the clocks whose stored deadlines no
+ * longer exist. Runs on the GM client that saw the change (calendarConfigured
+ * fires only there), whether or not it is the primary.
+ */
+function reportInvalidDeadlines(info) {
+  if (!isGM() || !info.calendar) return;
   const bad = store.getAllClocks().filter(c => c.triggers?.some(tr => tr.type === "date" && tr.at && !isValidMoment(tr.at, info.calendar)));
   if (!bad.length) return;
   notify("warn", t("Notify.deadlinesInvalid", { n: bad.length, names: bad.map(c => c.name).join(", ") }), { permanent: true });
@@ -164,7 +170,12 @@ Hooks.once("ready", async () => {
     if (!dispatcher.isPrimaryGM()) return;
     dispatcher.dispatch({ type: "rest", actors: payload.actors });
   });
-  startTimeSource(change => onTimeChange(change));
+  startTimeSource(change => {
+    if (change.reconfigured && change.structureChanged) {
+      try { reportInvalidDeadlines(timeInfo()); } catch (e) { warn("deadline revalidation failed", e); }
+    }
+    return onTimeChange(change);
+  });
   try { startProposalService({ isPrimary: () => dispatcher.isPrimaryGM() }); }
   catch (e) { warn("proposal relay failed to start", e); }
 

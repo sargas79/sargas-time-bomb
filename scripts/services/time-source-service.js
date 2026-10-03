@@ -30,6 +30,7 @@ export class OffSource {
   calendar() { return null; }
   worldTime() { return null; }
   momentToSeconds(m) { return localMomentToSeconds(m, null); }
+  elapsedBetween(from, to) { return localMomentToSeconds(to, null) - localMomentToSeconds(from, null); }
 }
 
 /* ------------------------------------------------------------------ */
@@ -57,6 +58,7 @@ export class WorldTimeSource {
   formatMoment(m) { return fallbackFormat(m, null); }
   calendar() { return null; }
   momentToSeconds(m) { return localMomentToSeconds(m, null); }
+  elapsedBetween(from, to) { return localMomentToSeconds(to, null) - localMomentToSeconds(from, null); }
 }
 
 /* ------------------------------------------------------------------ */
@@ -67,7 +69,7 @@ export class TTASource {
   #onChange = null;
   #lastKey = "";
   #calendarCache = null;
-  #lastReason = null;
+  #lastReasonKey = "";
 
   static get module() { return globalThis.game?.modules?.get(TTA_ID) ?? null; }
   static get isActive() { return !!TTASource.module?.active; }
@@ -101,13 +103,21 @@ export class TTASource {
   #report(extra = {}) {
     const moment = this.currentMoment();
     const key = momentKey(moment);
-    // The settings hook and the local timeChanged hook both describe one move;
-    // the second report of the same moment only adds the reason if it has one.
-    if (!extra.reconfigured && key && key === this.#lastKey && !extra.reason) return;
-    if (key === this.#lastKey && extra.reason && this.#lastReason === extra.reason) return;
+    const { reason, ...rest } = extra;
+    // TTA writes the setting first (updateSetting fires here) and then calls its
+    // local timeChanged hook with the reason. The moment is reported exactly
+    // once; a "next adventure day" reason that arrives for an already-reported
+    // moment is passed on as a rest-only notice, never as a second time step.
+    if (!rest.reconfigured && key && key === this.#lastKey) {
+      if (reason === "nextAdventureDay" && this.#lastReasonKey !== key) {
+        this.#lastReasonKey = key;
+        this.#onChange?.({ moment, worldTime: globalThis.game?.time?.worldTime ?? null, source: this.id, adventureDayOnly: true });
+      }
+      return;
+    }
     this.#lastKey = key;
-    this.#lastReason = extra.reason ?? null;
-    this.#onChange?.({ moment, worldTime: globalThis.game?.time?.worldTime ?? null, source: this.id, ...extra });
+    if (reason === "nextAdventureDay") this.#lastReasonKey = key;
+    this.#onChange?.({ moment, worldTime: globalThis.game?.time?.worldTime ?? null, source: this.id, reason: reason ?? null, ...rest });
   }
 
   /** Raw calendar object as TTA exposes it. */
@@ -151,15 +161,29 @@ export class TTASource {
    * and elapsed time agree exactly with the calendar; otherwise the local sum.
    */
   momentToSeconds(moment) {
+    const viaTTA = this.#ttaSeconds(moment);
+    return Number.isFinite(viaTTA) ? viaTTA : localMomentToSeconds(moment, this.calendar());
+  }
+
+  #ttaSeconds(moment) {
     const m = normalizeMoment(moment);
     if (!m) return NaN;
     const api = TTASource.api;
     try {
       if (typeof api?.utils?.campaignSeconds === "function" && typeof api.getCalendar === "function") {
-        return api.utils.campaignSeconds({ year: m.year, month: m.month, day: m.day }, { hour: m.hour, minute: m.minute }, api.getCalendar());
+        const v = api.utils.campaignSeconds({ year: m.year, month: m.month, day: m.day }, { hour: m.hour, minute: m.minute }, api.getCalendar());
+        return Number.isFinite(v) ? v : NaN;
       }
     } catch (e) { debug("TTA campaignSeconds failed", e); }
-    return localMomentToSeconds(m, this.calendar());
+    return NaN;
+  }
+
+  /** Seconds from `from` to `to`, computed with one arithmetic for both ends. */
+  elapsedBetween(from, to) {
+    const a = this.#ttaSeconds(from), b = this.#ttaSeconds(to);
+    if (Number.isFinite(a) && Number.isFinite(b)) return b - a;
+    const cal = this.calendar();
+    return localMomentToSeconds(to, cal) - localMomentToSeconds(from, cal);
   }
 
   #rawDate() {
@@ -263,7 +287,8 @@ export function timeInfo() {
     worldTime: globalThis.game?.time?.worldTime ?? null,
     calendar: src.calendar?.() ?? null,
     hasCalendar: !!src.hasCalendar,
-    momentToSeconds: m => src.momentToSeconds(m)
+    momentToSeconds: m => src.momentToSeconds(m),
+    elapsedBetween: (from, to) => src.elapsedBetween(from, to)
   };
 }
 
