@@ -6,6 +6,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Board cards show when a clock last changed, by what and by whom; labelled
+  clocks preview the next state and offer a "set state by name" picker; a
+  clock whose actor is gone says so.
+- Faction clocks require a group; a "Racing pair" action creates two faction
+  clocks linked both ways with reset. Reset links no longer count as cycles.
+- Projects may name an owner user (display only) and show "N days remaining"
+  when driven by elapsed days.
+- Time and date triggers show as paused while the time source is off, and
+  elapsed-time triggers say "(world time)" when no calendar is active.
+- Group collapse state on the board is remembered per client.
+- Validation checks the bound actor's type when it can be resolved.
+- `check-manifest` also checks the package version, the download URL version
+  and the presence of the icon and cover. README gains a Troubleshooting section.
+
+### Changed
+- The "Clock board" settings menu is GM-only, as the plan specifies; players
+  keep the sidebar button.
+
 ## [1.0.0] - 2026-10-03
 
 ### Added

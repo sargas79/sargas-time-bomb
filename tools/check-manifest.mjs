@@ -36,6 +36,12 @@ const referenced = [
   manifest.readme, manifest.license
 ].filter(Boolean);
 for (const f of referenced) if (!existsSync(join(root, f))) note(`module.json references missing file: ${f}`);
+for (const f of ["assets/icon.png", "assets/cover.png"]) if (!existsSync(join(root, f))) note(`missing ${f} (linked by module.json media)`);
+try {
+  const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  if (pkg.version !== manifest.version) note(`package.json version ${pkg.version} differs from module.json version ${manifest.version}`);
+} catch (e) { note(`package.json unreadable: ${e.message}`); }
+if (manifest.download && !manifest.download.includes(`/v${manifest.version}/`)) note(`module.json download URL does not name version ${manifest.version}: ${manifest.download}`);
 
 /* ---------- language ---------- */
 let lang;

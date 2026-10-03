@@ -129,6 +129,10 @@ test("checkLinkChain detects cycles and depth", () => {
   const a = mk([{ id: "l", type: "linked", advance: 1, clockId: "b", when: "completed" }], { id: "a" });
   const b = mk([{ id: "l", type: "linked", advance: 1, clockId: "a", when: "completed" }], { id: "b" });
   assert.equal(checkLinkChain("a", [a, b]).cycle, true);
+  // A racing pair linked both ways with reset is not a cycle: resets do not propagate.
+  const ra = mk([{ id: "l", type: "linked", advance: "reset", clockId: "rb", when: "completed" }], { id: "ra" });
+  const rb = mk([{ id: "l", type: "linked", advance: "reset", clockId: "ra", when: "completed" }], { id: "rb" });
+  assert.equal(checkLinkChain("ra", [ra, rb]).ok, true);
 });
 
 test("describeTrigger returns i18n keys", () => {

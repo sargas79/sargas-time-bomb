@@ -58,8 +58,10 @@ export function triggerText(trigger, { clocks = [], info = timeInfo() } = {}) {
         : t("Trigger.sceneAny", { adv });
     case "rest":
       return t("Trigger.rest", { adv });
-    case "time":
-      return t(trigger.once ? "Trigger.timeOnce" : "Trigger.timeEvery", { adv, every: everyText(trigger.every) });
+    case "time": {
+      const base = t(trigger.once ? "Trigger.timeOnce" : "Trigger.timeEvery", { adv, every: everyText(trigger.every) });
+      return info?.hasCalendar ? base : `${base} ${t("Trigger.worldTime")}`;
+    }
     case "date": {
       if (!trigger.at) return t("Trigger.dateMissing");
       const when = info?.hasCalendar ? formatMoment(trigger.at) : formatMoment(trigger.at);
@@ -85,6 +87,9 @@ export function triggerText(trigger, { clocks = [], info = timeInfo() } = {}) {
 export function nextText(clock, { clocks = [], info = timeInfo() } = {}) {
   if (isComplete(clock) && clock.onComplete !== "repeat") return "";
   if (!clock.triggers?.length) return t("Next.manual");
+  if (info?.sourceId === "off" && clock.triggers.some(tr => tr.type === "time" || tr.type === "date") && !clock.triggers.some(tr => tr.type !== "time" && tr.type !== "date")) {
+    return t("Next.paused");
+  }
   const date = clock.triggers.find(tr => tr.type === "date" && tr.at);
   if (date && info?.moment) {
     const rel = relativeText(date.at, info);
@@ -112,6 +117,14 @@ export function stateText(clock) {
     if (restTrigger) {
       const per = Number(restTrigger.advance) > 0 ? Number(restTrigger.advance) : 1;
       return t("State.restsRemaining", { n: Math.ceil(n / per) });
+    }
+    const timeTrigger = clock.triggers?.find(tr => tr.type === "time" && tr.every);
+    if (timeTrigger) {
+      const per = Number(timeTrigger.advance) > 0 ? Number(timeTrigger.advance) : 1;
+      const periods = Math.ceil(n / per);
+      const days = Number(timeTrigger.every.days) || 0;
+      if (days && !timeTrigger.every.hours && !timeTrigger.every.weeks) return t("State.daysRemaining", { n: periods * days });
+      return t("State.periodsRemaining", { n: periods, every: everyText(timeTrigger.every) });
     }
     return t("State.remaining", { n });
   }

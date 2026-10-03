@@ -163,8 +163,11 @@ export function checkLinkChain(clockId, allClocks, maxDepth = LIMITS.LINK_DEPTH_
     }
     return best;
   };
-  const upstream = id => (byId.get(id)?.triggers ?? []).filter(t => t.type === "linked" && t.clockId).map(t => t.clockId);
-  const downstream = id => allClocks.filter(c => c.triggers?.some(t => t.type === "linked" && t.clockId === id)).map(c => c.id);
+  // A reset link cannot propagate (a reset emits no completed/threshold event),
+  // so racing pairs linked both ways with `advance: "reset"` are not cycles.
+  const propagates = t => t.type === "linked" && t.clockId && t.advance !== "reset";
+  const upstream = id => (byId.get(id)?.triggers ?? []).filter(propagates).map(t => t.clockId);
+  const downstream = id => allClocks.filter(c => c.triggers?.some(t => propagates(t) && t.clockId === id)).map(c => c.id);
 
   const up = walk(clockId, [], upstream);
   if (up.cycle) return { ok: false, cycle: true, depth: up.depth, path: up.path };

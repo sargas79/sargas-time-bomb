@@ -67,6 +67,17 @@ test("linked triggers: missing target, self link, cycle, depth", () => {
   assert.ok(codes(validateClock(chain[6], { allClocks: chain })).includes("linkedDepth"));
 });
 
+test("faction clocks need a group; bound actors must be a bindable type when resolvable", () => {
+  const f = createClock({ kind: "faction", name: "Crows" });
+  assert.ok(codes(validateClock(f)).includes("factionGroup"));
+  assert.ok(validateClock({ ...f, group: "Crows" }).valid);
+  const c = createClock({ kind: "corruption", name: "c", actorUuid: "Actor.x", visibility: "actor-owners" });
+  assert.ok(validateClock(c).valid, "type unknown to pure code passes");
+  assert.ok(validateClock(c, { actorType: "character" }).valid);
+  assert.ok(codes(validateClock(c, { actorType: "party" })).includes("actorType"));
+  assert.ok(codes(validateClock(c, { actorType: null })).includes("actorType"), "missing actor");
+});
+
 test("clock count limit applies to new clocks", () => {
   const all = Array.from({ length: LIMITS.CLOCKS_MAX }, (_, i) => createClock({ kind: "progress", name: `c${i}` }));
   const c = createClock({ kind: "progress", name: "new" });

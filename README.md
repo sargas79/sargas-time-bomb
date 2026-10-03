@@ -195,6 +195,25 @@ await game.modules.get("sargas-time-bomb").api.createClock({
 });
 ```
 
+## Troubleshooting
+
+- **Nothing ticks.** Only the primary GM evaluates triggers; the board's status
+  line names who that is. If the time source is *Off*, time and date triggers
+  show as paused. Check *Module Settings → Time source*.
+- **A player's rest did not count.** Rests fire on the resting client and are
+  relayed to the primary GM through that user's own User document. The relay
+  needs the player connected when the GM is; otherwise use **Declare rest**.
+- **A player cannot see a corruption clock.** They must *own* the actor
+  (Observer is not enough). The GM can run `api.syncMirrors()` to rebuild the
+  owner mirrors.
+- **"Actor no longer available" on a card.** The bound token or actor was
+  deleted. Delete the clock or edit it and drop another actor.
+- **Dates flagged as invalid.** The calendar's month lengths changed in Through
+  the Ages. Edit the trigger date; invalid deadlines are never fired.
+- **Duplicate cards or hooks.** Two batches cannot overlap, but a free-text hook
+  trigger that names a very frequent hook can look like duplication. Review
+  *Module Settings → Registered hooks*.
+
 ## Development
 
 ```

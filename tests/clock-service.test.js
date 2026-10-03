@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  applyDelta, changeKind, completeClock, createClock, currentLabel, isComplete, normalizeClock,
+  applyDelta, changeKind, completeClock, createClock, currentLabel, isComplete, lastChange, nextLabel, normalizeClock,
   reachedThreshold, remaining, resetClock, setFilled
 } from "../scripts/services/clock-service.js";
 import { LIMITS } from "../scripts/constants.js";
@@ -121,6 +121,20 @@ test("weather front cycles through labels and emits weatherChanged", () => {
   assert.equal(r.clock.filled, 0);
   assert.equal(currentLabel(r.clock), "Clear");
   assert.ok(r.events.some(e => e.type === "completed" && e.repeat));
+});
+
+test("nextLabel previews the coming state and lastChange reads the log", () => {
+  const w = createClock({ kind: "weather" });
+  assert.equal(nextLabel(w), "Breezy");
+  const r = applyDelta(w, 5, ctx);
+  assert.equal(currentLabel(r.clock), "Clearing");
+  assert.equal(nextLabel(r.clock), "Clear", "wraps for repeating clocks");
+  assert.equal(lastChange(r.clock).delta, 5);
+  assert.equal(lastChange(w), null);
+  const stop = normalizeClock({ kind: "progress", segments: 2, segmentLabels: ["a", "b"], filled: 1 });
+  assert.equal(nextLabel(stop), null);
+  const p = normalizeClock({ kind: "project", ownerUserId: "u1" });
+  assert.equal(p.ownerUserId, "u1");
 });
 
 test("repeating clocks never store a full state, in both directions (D10)", () => {
