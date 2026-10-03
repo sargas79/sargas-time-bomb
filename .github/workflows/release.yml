@@ -19,18 +19,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
+          fetch-depth: 0
 
       - name: Resolve version from tag
         id: version
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
+          case "$TAG" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::tag must look like vX.Y.Z (got $TAG)"; exit 1;; esac
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      # On manual dispatch: check out the tag if it exists, otherwise create it
+      # on the dispatched commit and push it.
+      - name: Ensure the tag exists and is checked out
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
+          else
+            git tag -a "$TAG" -m "Sargas Time Bomb ${TAG#v}"
+            git push origin "refs/tags/$TAG"
+          fi
+          git checkout --quiet "$TAG"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Test
         run: npm test
