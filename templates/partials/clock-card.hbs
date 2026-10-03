@@ -15,8 +15,12 @@
     {{#if actorName}}
       <div class="stb-card__meta" data-actor-uuid="{{actorUuid}}"><a data-action="openActor"><i class="fa-solid fa-user"></i> {{actorName}}</a></div>
     {{/if}}
+    {{#if actorMissing}}<div class="stb-card__warning"><i class="fa-solid fa-triangle-exclamation"></i> {{stbT 'Board.actorMissing'}}</div>{{/if}}
+    {{#if ownerName}}<div class="stb-card__meta"><i class="fa-solid fa-user-pen"></i> {{stbT 'Board.owner' name=ownerName}}</div>{{/if}}
+    {{#if nextLabel}}<div class="stb-card__meta"><i class="fa-solid fa-forward-step"></i> {{stbT 'Board.nextState' label=nextLabel}}</div>{{/if}}
     {{#if effectLink}}<div class="stb-card__effect">{{{effectLink}}}</div>{{/if}}
     {{#if next}}<div class="stb-card__next"><i class="fa-regular fa-clock"></i> {{next}}</div>{{/if}}
+    {{#if lastChangeText}}<div class="stb-card__last">{{lastChangeText}}</div>{{/if}}
     {{#if expired}}<div class="stb-card__expired"><i class="fa-solid fa-bell"></i> {{stbT 'Board.alarmExpired'}}{{#if completedAt}} · {{completedAt}}{{/if}}</div>{{/if}}
     {{#if canControl}}
       <div class="stb-card__controls">
@@ -25,6 +29,7 @@
         <span class="stb-card__spacer"></span>
         {{#if expired}}<button type="button" data-action="dismiss" title="{{stbT 'Board.dismiss'}}"><i class="fa-solid fa-bell-slash"></i></button>{{/if}}
         {{#unless isAlarm}}<button type="button" data-action="setExact" title="{{stbT 'Board.setExact'}}"><i class="fa-solid fa-hashtag"></i></button>{{/unless}}
+        {{#if hasLabels}}<button type="button" data-action="setState" title="{{stbT 'Board.setState'}}"><i class="fa-solid fa-list"></i></button>{{/if}}
         <button type="button" data-action="complete" {{#if complete}}disabled{{/if}} title="{{stbT 'Board.complete'}}"><i class="fa-solid fa-flag-checkered"></i></button>
         <button type="button" data-action="reset" title="{{stbT 'Board.reset'}}"><i class="fa-solid fa-rotate-left"></i></button>
         {{#if isGMOnly}}<button type="button" data-action="reveal" title="{{stbT 'Board.reveal'}}"><i class="fa-solid fa-eye"></i></button>{{/if}}

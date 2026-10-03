@@ -191,6 +191,7 @@ export function normalizeClock(raw = {}, { idGen = fallbackId } = {}) {
     dismissed: raw.dismissed === true,
     visibility,
     actorUuid,
+    ownerUserId: typeof raw.ownerUserId === "string" && raw.ownerUserId ? raw.ownerUserId : null,
     triggers,
     triggerState,
     log,
@@ -255,6 +256,23 @@ export function currentLabel(clock) {
   if (idx >= n) idx = n - 1;
   if (idx < 0) idx = 0;
   return clock.segmentLabels[idx] ?? null;
+}
+
+/** Label of the state a repeating or filling clock reaches on its next tick, or null. */
+export function nextLabel(clock) {
+  if (!clock.segmentLabels?.length) return null;
+  const n = clock.segmentLabels.length;
+  let idx = progress(clock) + 1;
+  if (idx >= n) {
+    if (clock.onComplete !== "repeat") return null;
+    idx = idx % n;
+  }
+  return clock.segmentLabels[idx] ?? null;
+}
+
+/** Most recent audit entry, or null. */
+export function lastChange(clock) {
+  return clock.log?.[0] ?? null;
 }
 
 /** Highest threshold reached so far, or null. */

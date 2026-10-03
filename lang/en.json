@@ -172,12 +172,14 @@
       "anyThreshold": "any threshold",
       "unknownClock": "(missing clock)",
       "unknown": "Unknown trigger",
-      "rest": "{adv} at rest"
+      "rest": "{adv} at rest",
+      "worldTime": "(world time)"
     },
     "Next": {
       "manual": "advances manually",
       "due": "due {when} ({rel})",
-      "dateNoCalendar": "needs a calendar (Through the Ages)"
+      "dateNoCalendar": "needs a calendar (Through the Ages)",
+      "paused": "paused: time source is off"
     },
     "State": {
       "alarmFired": "Fired",
@@ -186,7 +188,9 @@
       "complete": "Complete",
       "restsRemaining": "{n} rests remaining",
       "remaining": "{n} remaining",
-      "progress": "{filled} / {segments}"
+      "progress": "{filled} / {segments}",
+      "daysRemaining": "{n} days remaining",
+      "periodsRemaining": "{n} × {every} remaining"
     },
     "Board": {
       "title": "Adventure Clocks",
@@ -240,7 +244,23 @@
       "importText": "JSON",
       "importKeepIds": "Keep original ids where they do not collide",
       "importButton": "Import",
-      "declareRest": "Declare rest (party)"
+      "declareRest": "Declare rest (party)",
+      "lastChanged": "last changed {when} ({source}, {user})",
+      "actorMissing": "Actor no longer available. Delete this clock or bind another actor.",
+      "owner": "Owner: {name}",
+      "nextState": "next: {label}",
+      "setState": "Set state by name",
+      "setStateTitle": "Set state",
+      "setStateLabel": "State",
+      "racingPair": "Racing pair…",
+      "racingTitle": "New racing pair",
+      "racingHint": "Two faction clocks linked both ways: when one completes, the other resets.",
+      "racingFirst": "First faction",
+      "racingFirstDefault": "Crows",
+      "racingSecond": "Second faction",
+      "racingSecondDefault": "Lampblacks",
+      "racingVisible": "Visible to players",
+      "racingName": "{name}: progress"
     },
     "Editor": {
       "title": "Clock",
@@ -294,7 +314,11 @@
       "save": "Save",
       "restHint": "Fires once per Rest for the Night (all resting party members count as one rest) and on “Declare rest”.",
       "effectHint": "Drop a PF2e condition or effect onto a threshold to link it. The link is shown on the card for the GM to drag onto the actor; nothing is applied automatically.",
-      "actorTypes": "Characters, NPCs and familiars only."
+      "actorTypes": "Characters, NPCs and familiars only.",
+      "groupFaction": "Faction name (required)",
+      "owner": "Owner",
+      "ownerHint": "Shown on the card. Player proposals arrive in 1.1.",
+      "ownerUnknown": "Unknown user ({id})"
     },
     "Log": {
       "when": "When",
@@ -343,7 +367,8 @@
       "importFailed": "Import failed: {reason}",
       "rewind": "Campaign time moved backwards ({from} → {to}). Clocks were not un-ticked; adjust manually if needed.",
       "rewindWorldTime": "World time moved backwards. Clocks were not un-ticked; adjust manually if needed.",
-      "actorTypeRefused": "“{name}” is a {type} actor; corruption clocks can only be bound to characters, NPCs and familiars."
+      "actorTypeRefused": "“{name}” is a {type} actor; corruption clocks can only be bound to characters, NPCs and familiars.",
+      "racingCreated": "Created racing clocks for {a} and {b}."
     },
     "Error": {
       "clockInvalid": "Not a clock.",
@@ -387,7 +412,9 @@
       "repeatAtFull": "A repeating clock cannot rest at its complete value; it wraps to the start.",
       "segmentLabelsCount": "Segment labels must be empty or exactly one per segment ({segments}).",
       "thresholdEffect": "A threshold's effect link is not a valid UUID.",
-      "triggerHookSelf": "A hook trigger cannot listen to this module's own hooks."
+      "triggerHookSelf": "A hook trigger cannot listen to this module's own hooks.",
+      "factionGroup": "A faction clock needs a group (the faction name).",
+      "actorType": "The bound actor is a {type}; only characters, NPCs and familiars can carry a clock."
     }
   }
 }

@@ -5,7 +5,9 @@
 import { APP_IDS, KINDS, MODULE_ID, SETTINGS, VISIBILITY, VISIBILITIES } from "../constants.js";
 import { enrich } from "../compat.js";
 import { getDialogV2, getSetting, isGM, moduleVersion, notify, randomID, rerenderModuleApps, t } from "../compat.js";
-import { isComplete, reachedThreshold } from "../services/clock-service.js";
+import { createClock, isComplete, lastChange, nextLabel, reachedThreshold } from "../services/clock-service.js";
+import { validateClock } from "../services/validation-service.js";
+import { everyText } from "../ui/describe.js";
 import * as dispatcher from "../services/dispatcher-service.js";
 import { exportEnvelope, parseImport } from "../services/portability-service.js";
 import { canView } from "../services/permission-service.js";
@@ -49,7 +51,9 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleGroup: BoardApp.#onToggleGroup,
       clearFilters: BoardApp.#onClearFilters,
       toggleCompleted: BoardApp.#onToggleCompleted,
-      openActor: BoardApp.#onOpenActor
+      openActor: BoardApp.#onOpenActor,
+      setState: BoardApp.#onSetState,
+      createRacingPair: BoardApp.#onCreateRacingPair
     }
   };
 
@@ -58,7 +62,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   #filters = { search: "", kind: "", visibility: "", actor: "", showCompleted: true };
-  #collapsed = new Set();
+  #collapsed = new Set((() => { try { return getSetting(SETTINGS.collapsedGroups) ?? []; } catch { return []; } })());
   #searchTimer = null;
 
   static #instance = null;
@@ -137,9 +141,21 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = clock.actorUuid ? store.resolveActor(clock.actorUuid) : null;
     const threshold = reachedThreshold(clock);
     const effectLink = threshold?.effectUuid ? await enrich(`@UUID[${threshold.effectUuid}]`) : null;
+    const last = lastChange(clock);
+    const lastChangeText = last ? t("Board.lastChanged", {
+      when: last.campaignMoment ? formatMoment(last.campaignMoment) : new Date(last.at).toLocaleString(),
+      source: t(`Source.${last.source}`),
+      user: last.userId ? (globalThis.game.users.get(last.userId)?.name ?? "—") : "—"
+    }) : null;
+    const owner = clock.ownerUserId ? globalThis.game.users.get(clock.ownerUserId) : null;
     return {
       effectLink,
       thresholdNote: threshold?.note || null,
+      lastChangeText,
+      nextLabel: nextLabel(clock),
+      hasLabels: !!clock.segmentLabels?.length,
+      ownerName: owner?.name ?? null,
+      actorMissing: !!clock.actorUuid && !actor,
       clock,
       id: clock.id,
       name: clock.name,
@@ -366,6 +382,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const key = target.closest("[data-group]")?.dataset.group;
     if (!key) return;
     if (this.#collapsed.has(key)) this.#collapsed.delete(key); else this.#collapsed.add(key);
+    try { globalThis.game.settings.set(MODULE_ID, SETTINGS.collapsedGroups, [...this.#collapsed]); } catch { /* client setting only */ }
     this.render();
   }
 
@@ -383,6 +400,68 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const uuid = target.closest("[data-actor-uuid]")?.dataset.actorUuid;
     const actor = store.resolveActor(uuid);
     actor?.sheet?.render(true);
+  }
+
+  /** Pick a labelled state by name (weather fronts and other labelled clocks). */
+  static async #onSetState(event, target) {
+    const clock = store.getClock(BoardApp.#clockId(target));
+    if (!clock?.segmentLabels?.length) return;
+    const Dialog = getDialogV2();
+    if (!Dialog) return;
+    const n = clock.segmentLabels.length;
+    const progressNow = clock.direction === "drain" ? clock.segments - clock.filled : clock.filled;
+    const current = Math.min(progressNow, n - 1); // a full non-repeating clock displays its last label
+    const options = clock.segmentLabels.map((l, i) => `<option value="${i}" ${i === current ? "selected" : ""}>${foundry.utils.escapeHTML(l || String(i))}</option>`).join("");
+    const idx = await Dialog.prompt({
+      window: { title: t("Board.setStateTitle") },
+      content: `<div class="stb form-group"><label>${t("Board.setStateLabel")}</label><select name="state" autofocus>${options}</select></div>`,
+      ok: { label: t("Board.apply"), callback: (ev, button) => Number(button.form.elements.state.value) },
+      rejectClose: false,
+      modal: true
+    });
+    if (idx === null || idx === undefined || Number.isNaN(idx) || idx === current) return; // same state: nothing to do
+    const filled = clock.direction === "drain" ? clock.segments - idx : idx;
+    await dispatcher.manual(clock.id, "set", filled);
+  }
+
+  /** Two faction clocks linked both ways: when one completes, the other resets. */
+  static async #onCreateRacingPair() {
+    const Dialog = getDialogV2();
+    if (!Dialog) return;
+    const field = (name, label, value, type = "text", extra = "") => `<div class="form-group"><label>${label}</label><input type="${type}" name="${name}" value="${value}" ${extra}></div>`;
+    const data = await Dialog.prompt({
+      window: { title: t("Board.racingTitle") },
+      content: `<div class="stb stb-import"><p class="hint">${t("Board.racingHint")}</p>
+        ${field("a", t("Board.racingFirst"), t("Board.racingFirstDefault"))}
+        ${field("b", t("Board.racingSecond"), t("Board.racingSecondDefault"))}
+        ${field("segments", t("Editor.segments"), 8, "number", 'min="1" max="48"')}
+        <div class="form-group"><label class="checkbox"><input type="checkbox" name="visible"> ${t("Board.racingVisible")}</label></div></div>`,
+      ok: { label: t("Editor.create"), callback: (ev, button) => {
+        const f = button.form.elements;
+        return { a: f.a.value.trim(), b: f.b.value.trim(), segments: Number(f.segments.value) || 8, visible: f.visible.checked };
+      } },
+      rejectClose: false,
+      modal: true
+    });
+    if (!data?.a || !data?.b) return;
+    const visibility = data.visible ? VISIBILITY.PLAYERS : VISIBILITY.GM_ONLY;
+    const idA = randomID(), idB = randomID();
+    const mk = (id, name, group, rival) => createClock({
+      id, kind: "faction", name: t("Board.racingName", { name }), group, segments: data.segments, visibility,
+      triggers: [{ type: "linked", advance: "reset", clockId: rival, when: "completed" }]
+    }, { idGen: () => randomID() });
+    const a = mk(idA, data.a, data.a, idB);
+    const b = mk(idB, data.b, data.b, idA);
+    const existing = store.getAllClocks();
+    // Each clock is validated against the existing set plus its twin only, so
+    // the clock-count limit counts the pair once.
+    for (const [c, twin] of [[a, b], [b, a]]) {
+      const v = validateClock(c, { allClocks: [...existing, twin], isNew: true });
+      if (!v.valid) { notify("error", t("Notify.invalid", { n: v.errors.length })); return; }
+    }
+    await store.writeBatch({ upsert: [a, b] });
+    notify("info", t("Notify.racingCreated", { a: data.a, b: data.b }));
+    rerenderModuleApps();
   }
 }
 

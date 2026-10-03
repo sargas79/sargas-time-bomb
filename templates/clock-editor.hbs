@@ -22,7 +22,7 @@
       <p class="hint">{{#each kinds}}{{#if selected}}{{hint}}{{/if}}{{/each}}</p>
       <div class="form-group stb-inline">
         <label>{{stbT 'Editor.group'}}</label>
-        <input type="text" name="group" value="{{clock.group}}" maxlength="{{limits.GROUP_MAX}}" placeholder="{{stbT 'Editor.groupPlaceholder'}}" data-no-rerender {{#if readonly}}disabled{{/if}}>
+        <input type="text" name="group" value="{{clock.group}}" maxlength="{{limits.GROUP_MAX}}" placeholder="{{#if isFaction}}{{stbT 'Editor.groupFaction'}}{{else}}{{stbT 'Editor.groupPlaceholder'}}{{/if}}" {{#if isFaction}}required{{/if}} data-no-rerender {{#if readonly}}disabled{{/if}}>
         <label>{{stbT 'Editor.color'}}</label>
         <input type="color" name="color" value="{{clock.color}}" {{#if readonly}}disabled{{/if}}>
         <label>{{stbT 'Editor.icon'}}</label>
@@ -69,6 +69,16 @@
         {{#each visibilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
       </select>
     </div>
+    {{#if isProject}}
+      <div class="form-group">
+        <label>{{stbT 'Editor.owner'}}</label>
+        <select name="ownerUserId" data-no-rerender {{#if readonly}}disabled{{/if}}>
+          <option value="">—</option>
+          {{#each owners}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+        </select>
+        <span class="hint">{{stbT 'Editor.ownerHint'}}</span>
+      </div>
+    {{/if}}
     <div class="form-group stb-actor">
       <label>{{stbT 'Editor.actor'}}</label>
       <input type="hidden" name="actorUuid" value="{{clock.actorUuid}}">

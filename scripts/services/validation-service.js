@@ -8,7 +8,7 @@ import {
 import { isMoment } from "./clock-service.js";
 import { isValidMoment } from "./schedule-service.js";
 import { checkLinkChain } from "./trigger-service.js";
-import { MODULE_ID } from "../constants.js";
+import { BINDABLE_ACTOR_TYPES, MODULE_ID } from "../constants.js";
 
 function err(code, path, data = {}) {
   return { code, path, data };
@@ -50,9 +50,10 @@ export function validateTrigger(trigger, index, { calendar } = {}) {
 
 /**
  * Validate a normalised clock.
- * options: { allClocks: [], calendar, isNew }
+ * options: { allClocks, calendar, isNew, actorType } — actorType is the bound
+ * actor's document type when the caller can resolve it (pure code cannot).
  */
-export function validateClock(clock, { allClocks = [], calendar = null, isNew = false } = {}) {
+export function validateClock(clock, { allClocks = [], calendar = null, isNew = false, actorType = undefined } = {}) {
   const errors = [];
   if (!clock || typeof clock !== "object") return { valid: false, errors: [err("clockInvalid", "")] };
 
@@ -79,6 +80,11 @@ export function validateClock(clock, { allClocks = [], calendar = null, isNew = 
   if (!ON_COMPLETE.includes(clock.onComplete)) errors.push(err("onComplete", "onComplete"));
   if (!VISIBILITIES.includes(clock.visibility)) errors.push(err("visibility", "visibility"));
   if (clock.visibility === VISIBILITY.ACTOR_OWNERS && !clock.actorUuid) errors.push(err("actorRequired", "actorUuid"));
+  // actorType is only known to Foundry-side callers; null/undefined means "unknown", not "wrong".
+  if (clock.actorUuid && typeof actorType === "string" && !BINDABLE_ACTOR_TYPES.includes(actorType)) {
+    errors.push(err("actorType", "actorUuid", { type: actorType }));
+  }
+  if (clock.kind === "faction" && !(typeof clock.group === "string" && clock.group.trim())) errors.push(err("factionGroup", "group"));
 
   const thresholds = Array.isArray(clock.thresholds) ? clock.thresholds : [];
   if (thresholds.length > LIMITS.THRESHOLDS_MAX) errors.push(err("thresholdsMax", "thresholds", { max: LIMITS.THRESHOLDS_MAX }));

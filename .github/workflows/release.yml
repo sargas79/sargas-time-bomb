@@ -65,6 +65,9 @@ jobs:
           m.manifest = `https://github.com/${repo}/releases/latest/download/module.json`;
           m.download = `https://github.com/${repo}/releases/download/v${version}/sargas-time-bomb.zip`;
           fs.writeFileSync("module.json", JSON.stringify(m, null, 2) + "\n");
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          pkg.version = version;
+          fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
           JS
         env:
           VERSION: ${{ steps.version.outputs.version }}

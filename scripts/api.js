@@ -30,7 +30,9 @@ function requireClock(id) {
 
 async function persist(clock, { isNew }) {
   const info = timeInfo();
-  const result = validateClock(clock, { allClocks: store.getAllClocks(), calendar: info.calendar, isNew });
+  const boundActor = clock.actorUuid ? store.resolveActor(clock.actorUuid) : null;
+  const actorType = boundActor ? boundActor.type : undefined;
+  const result = validateClock(clock, { allClocks: store.getAllClocks(), calendar: info.calendar, isNew, actorType });
   if (!result.valid) {
     const err = new Error(`${MODULE_ID}: invalid clock: ${result.errors.map(e => e.code).join(", ")}`);
     err.errors = result.errors;

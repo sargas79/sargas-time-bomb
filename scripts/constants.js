@@ -135,6 +135,7 @@ export const SETTINGS = Object.freeze({
   showBoardToPlayers: "showBoardToPlayers",
   sceneTriggerMode: "sceneTriggerMode",
   playerBoardDensity: "playerBoardDensity",
+  collapsedGroups: "collapsedGroups",
   debugLogging: "debugLogging",
   boardMenu: "boardMenu",
   hooksMenu: "hooksMenu"

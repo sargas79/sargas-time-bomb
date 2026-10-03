@@ -177,3 +177,6 @@
 .stb .stb-effect button { width: 1.6em; height: 1.6em; padding: 0; line-height: 1; }
 .stb-card__effect, .stb-chat-card__effect { font-size: 0.9em; }
 .stb-chat-card__effect .stb-chat-card__note { margin-left: 0.4em; }
+
+.stb-card__last { font-size: 0.78em; color: var(--stb-muted); }
+.stb-card__warning { font-size: 0.85em; color: var(--stb-danger); }
