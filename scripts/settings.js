@@ -10,7 +10,7 @@ function choices(prefix, values) {
   return Object.fromEntries(values.map(v => [v, `STB.Settings.${prefix}.${v}`]));
 }
 
-export function registerSettings({ BoardMenu, HooksMenu, onTimeSourceChange, onDisplayChange } = {}) {
+export function registerSettings({ BoardMenu, HooksMenu, onTimeSourceChange, onDisplayChange, onBreakChange } = {}) {
   const S = globalThis.game.settings;
 
   // Hidden storage.
@@ -21,6 +21,7 @@ export function registerSettings({ BoardMenu, HooksMenu, onTimeSourceChange, onD
   S.register(MODULE_ID, SETTINGS.registeredHooks, { scope: "world", config: false, type: Array, default: [] });
   S.register(MODULE_ID, SETTINGS.collapsedGroups, { scope: "client", config: false, type: Array, default: [] });
   S.register(MODULE_ID, SETTINGS.proposals, { scope: "world", config: false, type: Array, default: [], onChange: () => rerenderModuleApps() });
+  S.register(MODULE_ID, SETTINGS.breakTimer, { scope: "world", config: false, type: Object, default: {}, onChange: () => onBreakChange?.() });
 
   // Menus.
   if (BoardMenu) {

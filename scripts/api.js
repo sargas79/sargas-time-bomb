@@ -15,6 +15,7 @@ import { describeTrigger } from "./services/trigger-service.js";
 import { validateClock } from "./services/validation-service.js";
 import { nextText, triggerText } from "./ui/describe.js";
 import { BoardApp } from "./applications/board-app.js";
+import * as breakTimer from "./services/break-timer-service.js";
 import { ClockEditorApp } from "./applications/clock-editor-app.js";
 import { syncHookListeners } from "./hooks.js";
 
@@ -147,6 +148,14 @@ export function buildAPI(timeHandlers = {}) {
       await syncHookListeners();
       rerenderModuleApps();
       return result;
+    },
+
+    /** Real-world break countdown shown to everyone; minutes are clamped to 1-60. */
+    startBreak(minutes) { return breakTimer.startBreak(minutes); },
+    cancelBreak() { return breakTimer.cancelBreak(); },
+    getBreak() {
+      const timer = breakTimer.getBreak();
+      return { ...timer, remainingMs: breakTimer.remainingMs(timer, breakTimer.realNow()) };
     },
 
     syncHookListeners,

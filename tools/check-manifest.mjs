@@ -86,7 +86,7 @@ const pure = [
   "scripts/services/validation-service.js", "scripts/services/migration-service.js", "scripts/services/portability-service.js",
   "scripts/services/write-queue.js", "scripts/services/permission-service.js", "scripts/services/store-service.js",
   "scripts/services/dispatcher-service.js", "scripts/services/time-source-service.js", "scripts/services/rest-service.js",
-  "scripts/services/chat-service.js", "scripts/ui/pie.js", "scripts/ui/describe.js"
+  "scripts/services/chat-service.js", "scripts/services/break-timer-service.js", "scripts/ui/pie.js", "scripts/ui/describe.js"
 ];
 for (const p of pure) {
   try { await import(pathToFileURL(join(root, p)).href); }

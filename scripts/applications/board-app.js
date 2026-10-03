@@ -16,6 +16,7 @@ import { declareRest } from "../services/rest-service.js";
 import * as store from "../services/store-service.js";
 import { formatMoment, timeInfo, TTASource } from "../services/time-source-service.js";
 import { renderPie } from "../ui/pie.js";
+import { promptBreak } from "../ui/break-timer.js";
 import { nextText, stateText, visibilityText } from "../ui/describe.js";
 import { ClockEditorApp } from "./clock-editor-app.js";
 
@@ -47,6 +48,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
       dismiss: BoardApp.#onDismiss,
       declareRest: BoardApp.#onDeclareRest,
       evaluateNow: BoardApp.#onEvaluateNow,
+      breakTimer: BoardApp.#onBreakTimer,
       exportClocks: BoardApp.#onExport,
       importClocks: BoardApp.#onImport,
       toggleGroup: BoardApp.#onToggleGroup,
@@ -346,6 +348,10 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const api = globalThis.game.modules.get(MODULE_ID)?.api;
     const result = await api?.evaluateNow();
     notify("info", t("Notify.evaluated", { n: result?.changed?.length ?? 0 }));
+  }
+
+  static async #onBreakTimer() {
+    await promptBreak();
   }
 
   static #onExport() {

@@ -36,6 +36,11 @@ export const LIMITS = Object.freeze({
   REST_DEBOUNCE_MAX: 120
 });
 
+/** Break timer length in real-world minutes. */
+export const BREAK_MINUTES_MIN = 1;
+export const BREAK_MINUTES_MAX = 60;
+export const BREAK_MINUTES_DEFAULT = 30;
+
 export const LOG_MAX = LIMITS.LOG_MAX;
 
 export const KINDS = Object.freeze([
@@ -149,6 +154,7 @@ export const SETTINGS = Object.freeze({
   collapsedGroups: "collapsedGroups",
   proposals: "proposals",
   allowProposals: "allowProposals",
+  breakTimer: "breakTimer",
   debugLogging: "debugLogging",
   boardMenu: "boardMenu",
   hooksMenu: "hooksMenu"

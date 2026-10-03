@@ -12,6 +12,7 @@ import { postCards } from "./services/chat-service.js";
 import { relayRest, startRestRelayListener, startRestService } from "./services/rest-service.js";
 import { formatMoment, startTimeSource, timeInfo } from "./services/time-source-service.js";
 import { renderPie } from "./ui/pie.js";
+import { refreshBreakTimer } from "./ui/break-timer.js";
 import { BoardMenu } from "./applications/board-app.js";
 import { HooksApp } from "./applications/hooks-app.js";
 import { registerDocumentHooks, registerSceneHooks, registerSidebarButton, refreshSidebarButton, syncHookListeners } from "./hooks.js";
@@ -135,7 +136,8 @@ Hooks.once("init", () => {
     BoardMenu,
     HooksMenu: HooksApp,
     onTimeSourceChange: () => startTimeSource(),
-    onDisplayChange: () => refreshSidebarButton()
+    onDisplayChange: () => refreshSidebarButton(),
+    onBreakChange: () => refreshBreakTimer()
   });
 
   Handlebars.registerHelper("stbPie", (clock, options) => new Handlebars.SafeString(renderPie(clock, { size: options?.hash?.size ?? 64 })));
@@ -205,6 +207,7 @@ Hooks.once("ready", async () => {
   }
 
   refreshSidebarButton();
+  try { refreshBreakTimer(); } catch (e) { warn("break timer failed to start", e); }
   debug("ready", { primary: dispatcher.isPrimaryGM(), timeSource: timeInfo().sourceId });
   Hooks.callAll(HOOKS.ready, game.modules.get(MODULE_ID).api);
   log(`ready (time source: ${timeInfo().sourceId})`);

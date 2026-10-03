@@ -62,6 +62,10 @@ a cycle and wraps back to the start in the same write.
    take through Rest for the Night.
 6. **Export / Import** from the same menu. Imports get fresh ids and linked
    triggers inside the file are remapped.
+7. **Break timer…** from the same menu starts a real-world countdown of 1–60
+   minutes (a lunch break, a pause). Everyone sees it in a banner at the top of
+   the screen and is notified when it ends; a GM can end it early with the `×`
+   on the banner. It follows the wall clock, not campaign time.
 
 ## Player workflow
 
@@ -202,6 +206,7 @@ declareRest({ actors });              // actor uuids or documents; emits sargas-
 syncMirrors();                        // rebuild owner mirrors (primary GM)
 evaluateNow();                       // catch up elapsed time (primary GM)
 exportClocks(); importClocks(json);
+startBreak(minutes); cancelBreak(); getBreak();   // real-world break countdown, 1–60 minutes (GM starts/cancels)
 utils: { nextTrigger(clock), describeTrigger(trigger), momentToSeconds(moment), formatMoment(moment), timeInfo() }
 applications: { BoardApp, ClockEditorApp }
 ```
@@ -259,6 +264,9 @@ touch Foundry globals at import time; the checker imports them under plain Node.
 - Through the Ages enabled, disabled and absent: `+1 day` ticks a daily clock
   once and an 8 h clock three times; a combat round ticks nothing; disabling
   TTA switches to world time without losing data; rewind warns once.
+- Break timer: a 1-minute break shows the banner on GM and player clients,
+  survives a reload, and ends with one notification each; `×` ends it early
+  with no notification.
 - Module disable/re-enable: no duplicate sidebar buttons, hooks or flags.
 - GM-only entry ownership changed from the sidebar is repaired on load.
 
