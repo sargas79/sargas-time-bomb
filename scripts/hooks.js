@@ -2,7 +2,7 @@
  * Wiring: sidebar button, document hooks that re-render, scene tracking,
  * lazily registered `hook` trigger listeners, and ownership repair.
  */
-import { CURATED_HOOKS, FLAG_MIRROR_FOR, MODULE_ID, SETTINGS, TTA_ID } from "./constants.js";
+import { CURATED_HOOKS, DENIED_TRIGGER_HOOKS, FLAG_MIRROR_FOR, MODULE_ID, SETTINGS, TTA_ID } from "./constants.js";
 import { debug, getSetting, isGM, rerenderModuleApps, setSetting, t } from "./compat.js";
 import * as dispatcher from "./services/dispatcher-service.js";
 import * as store from "./services/store-service.js";
@@ -160,7 +160,7 @@ export async function syncHookListeners() {
     for (const tr of c.triggers ?? []) if (tr.type === "hook" && tr.hook) names.add(tr.hook);
   }
   for (const name of names) {
-    if (name.startsWith(`${MODULE_ID}.`)) { names.delete(name); continue; } // never feed our own hooks back in
+    if (name.startsWith(`${MODULE_ID}.`) || DENIED_TRIGGER_HOOKS.includes(name)) { names.delete(name); continue; } // never feed our own writes back in
     if (hookListeners.has(name)) continue;
     const id = Hooks.on(name, (...args) => onHookEvent(name, args));
     hookListeners.set(name, id);

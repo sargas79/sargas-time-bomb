@@ -413,7 +413,12 @@ export function resetClock(input, context = {}) {
   clock.filled = startValue(clock);
   clock.completedAt = null;
   clock.dismissed = false;
+  // Re-arm elapsed-time "once" triggers, but leave a one-shot deadline whose
+  // date has passed fired: otherwise the next time step completes the clock
+  // the GM just reset.
+  const oneShotDates = new Set((clock.triggers ?? []).filter(t => t.type === "date" && !t.repeatEvery).map(t => t.id));
   for (const id of Object.keys(clock.triggerState ?? {})) {
+    if (oneShotDates.has(id)) continue;
     clock.triggerState[id] = { ...clock.triggerState[id], fired: false };
   }
   appendLog(clock, makeLogEntry(clock, -(prevFilled - clock.filled) * (clock.direction === "drain" ? -1 : 1), { ...context, note: context.note ?? "reset" }));

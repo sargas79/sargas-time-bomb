@@ -8,7 +8,7 @@ import {
 import { isMoment } from "./clock-service.js";
 import { isValidMoment } from "./schedule-service.js";
 import { checkLinkChain } from "./trigger-service.js";
-import { BINDABLE_ACTOR_TYPES, MODULE_ID } from "../constants.js";
+import { BINDABLE_ACTOR_TYPES, DENIED_TRIGGER_HOOKS, MODULE_ID } from "../constants.js";
 
 function err(code, path, data = {}) {
   return { code, path, data };
@@ -37,6 +37,7 @@ export function validateTrigger(trigger, index, { calendar } = {}) {
     case "hook":
       if (!trigger.hook || typeof trigger.hook !== "string" || !/^[\w.:-]+$/.test(trigger.hook)) errors.push(err("triggerHook", `${p}.hook`));
       else if (trigger.hook.startsWith(`${MODULE_ID}.`)) errors.push(err("triggerHookSelf", `${p}.hook`));
+      else if (DENIED_TRIGGER_HOOKS.includes(trigger.hook)) errors.push(err("triggerHookDenied", `${p}.hook`, { hook: trigger.hook }));
       break;
     case "linked":
       if (!trigger.clockId) errors.push(err("triggerLinkedTarget", `${p}.clockId`));

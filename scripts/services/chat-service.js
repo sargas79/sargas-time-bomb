@@ -35,6 +35,7 @@ export function describeEvents(clock, events) {
       case "completed": lines.push(t(ev.repeat ? "Card.completedRepeat" : "Card.completed")); break;
       case "reset": lines.push(t(ev.automatic ? "Card.resetAuto" : "Card.reset")); break;
       case "weatherChanged": lines.push(t("Card.weatherChanged", { from: ev.previousLabel ?? "—", to: ev.label ?? "—" })); break;
+      case "annotated": lines.push(t("Card.annotated", { note: ev.note })); break;
       default: break;
     }
   }

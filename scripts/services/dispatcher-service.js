@@ -48,6 +48,11 @@ export function runBatch(batch = {}) {
   return store.writeQueue.enqueue(() => runBatchNow(batch));
 }
 
+/** For callers already inside the write queue (the time handler). */
+export function runBatchUnqueued(batch = {}) {
+  return runBatchNow(batch);
+}
+
 async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
   const info = timeInfoProvider() ?? {};
   const ctx = {
@@ -105,14 +110,20 @@ async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
       if (!r.matched.length && !stateChanged) continue;
       let working = { ...clock, triggerState: r.triggerState };
       working = applyTriggerUpdates(working, r.triggerUpdates);
+      const bookkeepingChanged = stateChanged || Object.keys(r.triggerUpdates).length > 0;
       const c = { ...ctx, source: event.source ?? event.type, moment: event.to ?? ctx.moment };
       let res;
       if (r.reset) res = resetClock(working, c);
       else if (r.complete) res = completeClock(working, c);
       else if (r.delta !== 0) res = applyDelta(working, r.delta, c);
       else res = { clock: working, events: [], changed: true };
-      // Bookkeeping-only changes still need saving (carry seconds, re-armed dates).
-      if (!res.changed) res = { clock: working, events: [], changed: true };
+      // Bookkeeping-only changes still need saving (carry seconds, re-armed
+      // dates); a matched trigger that moved nothing and changed nothing is not
+      // written, or a hook trigger on a document hook could feed itself forever.
+      if (!res.changed) {
+        if (!bookkeepingChanged) continue;
+        res = { clock: working, events: [], changed: true };
+      }
       res.depth = depth;
       record(clock.id, res, c.source);
     }

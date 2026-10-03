@@ -361,7 +361,8 @@
       "resetAuto": "Reset automatically",
       "weatherChanged": "Weather: {from} → {to}",
       "unnamedThreshold": "unnamed",
-      "catchupTitle": "While no GM was online"
+      "catchupTitle": "While no GM was online",
+      "annotated": "Note added: {note}"
     },
     "Notify": {
       "gmOnly": "Only a GM can change clocks.",
@@ -424,7 +425,8 @@
       "thresholdEffect": "A threshold's effect link is not a valid UUID.",
       "triggerHookSelf": "A hook trigger cannot listen to this module's own hooks.",
       "factionGroup": "A faction clock needs a group (the faction name).",
-      "actorType": "The bound actor is a {type}; only characters, NPCs and familiars can carry a clock."
+      "actorType": "The bound actor is a {type}; only characters, NPCs and familiars can carry a clock.",
+      "triggerHookDenied": "Hook {hook} is emitted by this module's own writes and cannot be a trigger."
     },
     "Proposal": {
       "queue": "{n} pending proposal(s)",

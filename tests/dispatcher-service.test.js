@@ -111,6 +111,19 @@ test("concurrent batches serialise: two quick +1 clicks are both applied", async
   } finally { stub.uninstall(); }
 });
 
+test("a matched trigger that moves nothing and changes no bookkeeping is not written", async () => {
+  const stub = installFoundryStub(stubOpts);
+  try {
+    const { store, dispatcher } = await load();
+    const full = createClock({ kind: "progress", name: "Full", visibility: "players", segments: 2, filled: 2, triggers: [{ id: "h", type: "hook", advance: 1, hook: "pauseGame" }] });
+    await store.writeBatch({ upsert: [full] });
+    stub.settingWrites.length = 0;
+    const r = await dispatcher.dispatch({ type: "hook", hook: "pauseGame" });
+    assert.equal(r.changed.length, 0);
+    assert.equal(stub.settingWrites.filter(w => w.key === `${MODULE_ID}.clocks`).length, 0, "no write, so no self-feeding loop");
+  } finally { stub.uninstall(); }
+});
+
 test("rival faction clocks: completion resets the rival", async () => {
   const stub = installFoundryStub(stubOpts);
   try {

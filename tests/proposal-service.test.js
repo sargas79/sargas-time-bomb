@@ -135,5 +135,9 @@ test("proposals: full records stay on the GM entry, players see only pending sta
     assert.equal(store.getClock(clock.id).log[0].source, "proposal");
     assert.equal(getProposals().length, 0);
     assert.ok(stub.chat.some(m => Array.isArray(m.whisper) && m.whisper.includes("p1")), "the player was told");
+
+    // An approved note renders on the card instead of producing an empty one.
+    const { describeEvents } = await import("../scripts/services/chat-service.js");
+    assert.deepEqual(describeEvents(clock, [{ type: "annotated", note: "Dreams" }]).length, 1);
   } finally { stub.uninstall(); }
 });

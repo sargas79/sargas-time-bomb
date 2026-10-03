@@ -226,3 +226,16 @@ test("annotateClock appends a zero-delta note without moving the clock", () => {
   assert.equal(r.clock.log[0].userId, "p1");
   assert.equal(annotateClock(c, "   ", ctx).changed, false);
 });
+
+test("a manual reset re-arms once-triggers but leaves a past one-shot deadline fired", () => {
+  const c = normalizeClock({ kind: "countdown", segments: 4, triggers: [
+    { id: "d", type: "date", at: { year: 1, month: 1, day: 1 } },
+    { id: "r", type: "date", at: { year: 1, month: 1, day: 1 }, repeatEvery: { days: 1 } },
+    { id: "o", type: "time", advance: 1, every: { hours: 1 }, once: true }
+  ] });
+  c.triggerState.d.fired = true; c.triggerState.r.fired = true; c.triggerState.o.fired = true;
+  const r = resetClock(c, ctx);
+  assert.equal(r.clock.triggerState.d.fired, true, "one-shot deadline stays fired");
+  assert.equal(r.clock.triggerState.r.fired, false);
+  assert.equal(r.clock.triggerState.o.fired, false);
+});
