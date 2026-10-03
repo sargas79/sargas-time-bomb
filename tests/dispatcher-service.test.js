@@ -124,6 +124,26 @@ test("a matched trigger that moves nothing and changes no bookkeeping is not wri
   } finally { stub.uninstall(); }
 });
 
+test("manual reset through the dispatcher keeps a past deadline fired and re-arms a future one", async () => {
+  const stub = installFoundryStub(stubOpts);
+  try {
+    const { store, dispatcher } = await load();
+    const CAL = { monthLengths: [30], monthBase: 1 };
+    dispatcher.configure({ timeInfo: () => ({ moment: { year: 1, month: 1, day: 10, hour: 0, minute: 0 }, worldTime: 0, calendar: CAL }) });
+    const clock = createClock({ kind: "countdown", name: "D", visibility: "players", segments: 4, triggers: [
+      { id: "past", type: "date", at: { year: 1, month: 1, day: 5 } },
+      { id: "ahead", type: "date", at: { year: 1, month: 1, day: 20 } }
+    ] });
+    clock.triggerState.past.fired = true; clock.triggerState.ahead.fired = true;
+    await store.writeBatch({ upsert: [clock] });
+    await dispatcher.manual(clock.id, "reset");
+    const after = store.getClock(clock.id);
+    assert.equal(after.triggerState.past.fired, true);
+    assert.equal(after.triggerState.ahead.fired, false);
+    dispatcher.configure({ timeInfo: () => ({ moment: null, worldTime: null, calendar: null }) });
+  } finally { stub.uninstall(); }
+});
+
 test("rival faction clocks: completion resets the rival", async () => {
   const stub = installFoundryStub(stubOpts);
   try {

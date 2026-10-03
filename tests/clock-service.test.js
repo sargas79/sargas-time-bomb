@@ -234,8 +234,12 @@ test("a manual reset re-arms once-triggers but leaves a past one-shot deadline f
     { id: "o", type: "time", advance: 1, every: { hours: 1 }, once: true }
   ] });
   c.triggerState.d.fired = true; c.triggerState.r.fired = true; c.triggerState.o.fired = true;
-  const r = resetClock(c, ctx);
-  assert.equal(r.clock.triggerState.d.fired, true, "one-shot deadline stays fired");
+  const r = resetClock(c, { ...ctx, isPast: () => true });
+  assert.equal(r.clock.triggerState.d.fired, true, "a past one-shot deadline stays fired");
   assert.equal(r.clock.triggerState.r.fired, false);
   assert.equal(r.clock.triggerState.o.fired, false);
+  const future = resetClock(c, { ...ctx, isPast: () => false });
+  assert.equal(future.clock.triggerState.d.fired, false, "a deadline still ahead re-arms");
+  const noMoment = resetClock(c, ctx);
+  assert.equal(noMoment.clock.triggerState.d.fired, false, "without a current moment everything re-arms");
 });

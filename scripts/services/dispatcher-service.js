@@ -6,6 +6,7 @@ import { HOOKS, LIMITS, MODULE_ID } from "../constants.js";
 import { currentUserId, debug, notify, t, warn } from "../compat.js";
 import { annotateClock, applyDelta, completeClock, dismissClock, isComplete, resetClock, setFilled } from "./clock-service.js";
 import { applyTriggerUpdates, evaluate } from "./trigger-service.js";
+import { compareMoments } from "./schedule-service.js";
 import * as store from "./store-service.js";
 
 let chatHandler = null;
@@ -63,6 +64,12 @@ async function runBatchNow({ ops = [], events = [], context = {} } = {}) {
     source: context.source ?? "manual"
   };
   const calendar = context.calendar ?? info.calendar ?? null;
+  // Lets pure clock code ask "is this deadline already behind us?" without a calendar of its own.
+  ctx.isPast = at => {
+    if (!ctx.moment || !at) return false;
+    const cmp = compareMoments(ctx.moment, at, calendar);
+    return Number.isFinite(cmp) && cmp >= 0;
+  };
 
   const byId = new Map(store.getAllClocks().map(c => [c.id, c]));
   const changed = new Map();
