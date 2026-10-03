@@ -53,7 +53,9 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   static PARTS = {
-    form: { template: `modules/${MODULE_ID}/templates/clock-editor.hbs`, scrollable: [".stb-editor__scroll"] }
+    // Each part must render exactly one root element, so the footer is its own part.
+    form: { template: `modules/${MODULE_ID}/templates/clock-editor.hbs`, scrollable: [""] },
+    footer: { template: `modules/${MODULE_ID}/templates/clock-editor-footer.hbs` }
   };
 
   #draft;
@@ -184,6 +186,7 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _attachPartListeners(partId, el, options) {
     super._attachPartListeners?.(partId, el, options);
+    if (partId !== "form") return;
     el.addEventListener("change", ev => {
       if (ev.target.matches("[data-no-rerender]")) { this.#readForm(); return; }
       this.#readForm();

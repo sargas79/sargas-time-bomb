@@ -18,7 +18,7 @@ import { registerDocumentHooks, registerSceneHooks, registerSidebarButton, refre
 import { startProposalService } from "./services/proposal-service.js";
 
 const TEMPLATES = [
-  "board", "clock-editor", "hooks",
+  "board", "clock-editor", "clock-editor-footer", "hooks",
   "partials/clock-card", "partials/clock-pie", "partials/threshold-list", "partials/trigger-list",
   "chat/clock-card"
 ].map(n => `modules/${MODULE_ID}/templates/${n}.hbs`);

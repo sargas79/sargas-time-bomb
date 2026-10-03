@@ -120,12 +120,3 @@
     </fieldset>
   {{/unless}}
 </div>
-
-<footer class="stb-editor__footer">
-  {{#if readonly}}
-    <button type="button" data-action="cancel">{{stbT 'Editor.close'}}</button>
-  {{else}}
-    <button type="button" data-action="cancel">{{stbT 'Editor.cancel'}}</button>
-    <button type="submit" class="stb-primary"><i class="fa-solid fa-floppy-disk"></i> {{#if isNew}}{{stbT 'Editor.create'}}{{else}}{{stbT 'Editor.save'}}{{/if}}</button>
-  {{/if}}
-</footer>
