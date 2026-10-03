@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-03
+
 ### Fixed
 - The clock editor failed to open ("Template part "form" must render a single
   HTML element"): its template rendered the scroll area and the footer as two
