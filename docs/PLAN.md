@@ -8,7 +8,7 @@ events. It is designed as a companion to **Through the Ages** (`through-the-ages
 v2.1.0), which supplies the campaign calendar and clock, while still working in a
 world that does not run it.
 
-Status: plan only. The repository currently holds `LICENSE` and nothing else.
+Status: implemented (milestones M0–M6). This document is kept as the design reference; see `README.md` for usage.
 
 ---
 

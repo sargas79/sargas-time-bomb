@@ -1,0 +1,18 @@
+<fieldset class="stb-fieldset stb-thresholds">
+  <legend>{{stbT 'Editor.thresholds'}} <small>{{thresholds.length}}/{{limits.THRESHOLDS_MAX}}</small></legend>
+  {{#if thresholds.length}}
+    <ol class="stb-list">
+      {{#each thresholds}}
+        <li class="stb-list__row">
+          <input type="number" name="thresholds.{{index}}.at" value="{{at}}" min="1" max="{{../clock.segments}}" class="stb-w-4" aria-label="{{stbT 'Editor.thresholdAt'}}" {{#if ../readonly}}disabled{{/if}}>
+          <input type="text" name="thresholds.{{index}}.label" value="{{label}}" placeholder="{{stbT 'Editor.thresholdLabel'}}" maxlength="{{../limits.LABEL_MAX}}" data-no-rerender {{#if ../readonly}}disabled{{/if}}>
+          <input type="text" name="thresholds.{{index}}.note" value="{{note}}" placeholder="{{stbT 'Editor.thresholdNote'}}" data-no-rerender {{#if ../readonly}}disabled{{/if}}>
+          {{#unless ../readonly}}<button type="button" data-action="removeThreshold" data-index="{{index}}" title="{{stbT 'Editor.remove'}}"><i class="fa-solid fa-xmark"></i></button>{{/unless}}
+        </li>
+      {{/each}}
+    </ol>
+  {{else}}
+    <p class="hint">{{stbT 'Editor.noThresholds'}}</p>
+  {{/if}}
+  {{#unless readonly}}{{#if canAddThreshold}}<button type="button" data-action="addThreshold"><i class="fa-solid fa-plus"></i> {{stbT 'Editor.addThreshold'}}</button>{{/if}}{{/unless}}
+</fieldset>

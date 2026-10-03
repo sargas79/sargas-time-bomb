@@ -1,0 +1,36 @@
+<article class="stb-card stb-card--{{kind}} stb-card--{{visibilityKey}}{{#if complete}} is-complete{{/if}}{{#if expired}} is-expired{{/if}}" data-clock-id="{{id}}" style="--stb-clock-color: {{color}};">
+  <div class="stb-card__pie" data-action="edit" title="{{stbT 'Board.openClock'}}">{{{pie}}}</div>
+  <div class="stb-card__body">
+    <header class="stb-card__header">
+      <i class="{{icon}} stb-card__icon"></i>
+      <h4 class="stb-card__name" data-action="edit">{{name}}</h4>
+      <span class="stb-card__kind">{{kindLabel}}</span>
+      <span class="stb-card__visibility" title="{{visibility}}">
+        {{#if isGMOnly}}<i class="fa-solid fa-eye-slash"></i>{{/if}}
+        {{#if isPlayers}}<i class="fa-solid fa-eye"></i>{{/if}}
+        {{#if isActor}}<i class="fa-solid fa-user"></i>{{/if}}
+      </span>
+    </header>
+    <div class="stb-card__state">{{state}}</div>
+    {{#if actorName}}
+      <div class="stb-card__meta" data-actor-uuid="{{actorUuid}}"><a data-action="openActor"><i class="fa-solid fa-user"></i> {{actorName}}</a></div>
+    {{/if}}
+    {{#if next}}<div class="stb-card__next"><i class="fa-regular fa-clock"></i> {{next}}</div>{{/if}}
+    {{#if expired}}<div class="stb-card__expired"><i class="fa-solid fa-bell"></i> {{stbT 'Board.alarmExpired'}}{{#if completedAt}} · {{completedAt}}{{/if}}</div>{{/if}}
+    {{#if canControl}}
+      <div class="stb-card__controls">
+        <button type="button" data-action="retreat" data-delta="1" {{#unless canRetreat}}disabled{{/unless}} title="{{stbT 'Board.minusOne'}}"><i class="fa-solid fa-minus"></i></button>
+        <button type="button" data-action="advance" data-delta="1" {{#unless canAdvance}}disabled{{/unless}} title="{{stbT 'Board.plusOne'}}"><i class="fa-solid fa-plus"></i></button>
+        <span class="stb-card__spacer"></span>
+        {{#if expired}}<button type="button" data-action="dismiss" title="{{stbT 'Board.dismiss'}}"><i class="fa-solid fa-bell-slash"></i></button>{{/if}}
+        {{#unless isAlarm}}<button type="button" data-action="setExact" title="{{stbT 'Board.setExact'}}"><i class="fa-solid fa-hashtag"></i></button>{{/unless}}
+        <button type="button" data-action="complete" {{#if complete}}disabled{{/if}} title="{{stbT 'Board.complete'}}"><i class="fa-solid fa-flag-checkered"></i></button>
+        <button type="button" data-action="reset" title="{{stbT 'Board.reset'}}"><i class="fa-solid fa-rotate-left"></i></button>
+        {{#if isGMOnly}}<button type="button" data-action="reveal" title="{{stbT 'Board.reveal'}}"><i class="fa-solid fa-eye"></i></button>{{/if}}
+        {{#if isPlayers}}<button type="button" data-action="hide" title="{{stbT 'Board.hide'}}"><i class="fa-solid fa-eye-slash"></i></button>{{/if}}
+        <button type="button" data-action="edit" title="{{stbT 'Board.edit'}}"><i class="fa-solid fa-pen"></i></button>
+        <button type="button" data-action="delete" class="stb-danger" title="{{stbT 'Board.delete'}}"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    {{/if}}
+  </div>
+</article>

@@ -1,0 +1,121 @@
+<div class="stb-editor__scroll">
+  {{#if errors.length}}
+    <div class="stb-errors">
+      <strong>{{stbT 'Editor.fixErrors'}}</strong>
+      <ul>{{#each errors}}<li>{{this}}</li>{{/each}}</ul>
+    </div>
+  {{/if}}
+
+  <div class="stb-editor__top">
+    <div class="stb-editor__preview" style="--stb-clock-color: {{clock.color}};">{{{pie}}}</div>
+    <div class="stb-editor__main">
+      <div class="form-group">
+        <label>{{stbT 'Editor.name'}}</label>
+        <input type="text" name="name" value="{{clock.name}}" maxlength="{{limits.NAME_MAX}}" required data-no-rerender {{#if readonly}}disabled{{/if}}>
+      </div>
+      <div class="form-group">
+        <label>{{stbT 'Editor.kind'}}</label>
+        <select name="kind" {{#if readonly}}disabled{{/if}}>
+          {{#each kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+      </div>
+      <p class="hint">{{#each kinds}}{{#if selected}}{{hint}}{{/if}}{{/each}}</p>
+      <div class="form-group stb-inline">
+        <label>{{stbT 'Editor.group'}}</label>
+        <input type="text" name="group" value="{{clock.group}}" maxlength="{{limits.GROUP_MAX}}" placeholder="{{stbT 'Editor.groupPlaceholder'}}" data-no-rerender {{#if readonly}}disabled{{/if}}>
+        <label>{{stbT 'Editor.color'}}</label>
+        <input type="color" name="color" value="{{clock.color}}" {{#if readonly}}disabled{{/if}}>
+        <label>{{stbT 'Editor.icon'}}</label>
+        <input type="text" name="icon" value="{{clock.icon}}" placeholder="fa-solid fa-clock" data-no-rerender {{#if readonly}}disabled{{/if}}>
+      </div>
+    </div>
+  </div>
+
+  {{#unless isAlarm}}
+    <fieldset class="stb-fieldset">
+      <legend>{{stbT 'Editor.segments'}}</legend>
+      <div class="form-group stb-inline">
+        <input type="number" name="segments" value="{{clock.segments}}" min="1" max="{{limits.SEGMENTS_MAX}}" class="stb-w-4" {{#if readonly}}disabled{{/if}}>
+        <span class="stb-presets">
+          {{#each segmentPresets}}{{#unless readonly}}<button type="button" data-action="setSegments" data-value="{{this}}" class="{{#if (stbEq this ../clock.segments)}}active{{/if}}">{{this}}</button>{{/unless}}{{/each}}
+        </span>
+        <label>{{stbT 'Editor.filled'}}</label>
+        <input type="number" name="filled" value="{{clock.filled}}" min="0" max="{{clock.segments}}" class="stb-w-4" {{#if readonly}}disabled{{/if}}>
+        <label>{{stbT 'Editor.direction'}}</label>
+        <select name="direction" {{#if readonly}}disabled{{/if}}>
+          {{#each directions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+      </div>
+      {{#if isWeather}}
+        <div class="stb-labels">
+          <label>{{stbT 'Editor.segmentLabels'}} {{#unless readonly}}<button type="button" data-action="fillLabels" class="stb-link">{{stbT 'Editor.fillLabels'}}</button>{{/unless}}</label>
+          <div class="stb-labels__grid">
+            {{#each segmentLabels}}<input type="text" name="segmentLabels.{{index}}" value="{{value}}" placeholder="{{index}}" maxlength="{{../limits.LABEL_MAX}}" data-no-rerender {{#if ../readonly}}disabled{{/if}}>{{/each}}
+          </div>
+        </div>
+      {{/if}}
+    </fieldset>
+  {{/unless}}
+
+  <fieldset class="stb-fieldset">
+    <legend>{{stbT 'Editor.behaviour'}}</legend>
+    <div class="form-group stb-inline">
+      <label>{{stbT 'Editor.onComplete'}}</label>
+      <select name="onComplete" {{#if readonly}}disabled{{/if}}>
+        {{#each onCompleteOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+      <label>{{stbT 'Editor.visibility'}}</label>
+      <select name="visibility" {{#if readonly}}disabled{{/if}}>
+        {{#each visibilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    </div>
+    <div class="form-group stb-actor">
+      <label>{{stbT 'Editor.actor'}}</label>
+      <input type="hidden" name="actorUuid" value="{{clock.actorUuid}}">
+      {{#if actor}}
+        <span class="stb-actor__chip"><img src="{{actor.img}}" alt=""> {{actor.name}} {{#unless readonly}}<button type="button" data-action="clearActor" title="{{stbT 'Editor.remove'}}"><i class="fa-solid fa-xmark"></i></button>{{/unless}}</span>
+      {{else}}
+        <span class="hint">{{stbT 'Editor.actorHint'}}</span>
+      {{/if}}
+    </div>
+  </fieldset>
+
+  {{#unless isAlarm}}{{> "modules/sargas-time-bomb/templates/partials/threshold-list.hbs" this}}{{/unless}}
+  {{> "modules/sargas-time-bomb/templates/partials/trigger-list.hbs" this}}
+
+  <fieldset class="stb-fieldset">
+    <legend>{{stbT 'Editor.description'}}</legend>
+    {{#if readonly}}
+      <div class="stb-description">{{{descriptionHTML}}}</div>
+    {{else if useProseMirror}}
+      <prose-mirror name="description" value="{{clock.description}}" toggled compact data-no-rerender>{{{descriptionHTML}}}</prose-mirror>
+    {{else}}
+      <textarea name="description" rows="5" maxlength="{{limits.DESCRIPTION_MAX}}" data-no-rerender>{{clock.description}}</textarea>
+    {{/if}}
+  </fieldset>
+
+  {{#unless isNew}}
+    <fieldset class="stb-fieldset stb-log">
+      <legend><button type="button" data-action="toggleLog" class="stb-link"><i class="fa-solid fa-chevron-{{#if showLog}}down{{else}}right{{/if}}"></i> {{stbT 'Editor.log'}} ({{log.length}})</button></legend>
+      {{#if showLog}}
+        {{#if log.length}}
+          <table class="stb-log__table">
+            <thead><tr><th>{{stbT 'Log.when'}}</th><th>{{stbT 'Log.source'}}</th><th>{{stbT 'Log.who'}}</th><th>{{stbT 'Log.delta'}}</th><th>{{stbT 'Log.filled'}}</th></tr></thead>
+            <tbody>
+              {{#each log}}<tr><td>{{when}}</td><td>{{sourceLabel}}</td><td>{{userName}}</td><td>{{deltaText}}</td><td>{{filled}}</td></tr>{{/each}}
+            </tbody>
+          </table>
+        {{else}}<p class="hint">{{stbT 'Editor.noLog'}}</p>{{/if}}
+      {{/if}}
+    </fieldset>
+  {{/unless}}
+</div>
+
+<footer class="stb-editor__footer">
+  {{#if readonly}}
+    <button type="button" data-action="cancel">{{stbT 'Editor.close'}}</button>
+  {{else}}
+    <button type="button" data-action="cancel">{{stbT 'Editor.cancel'}}</button>
+    <button type="submit" class="stb-primary"><i class="fa-solid fa-floppy-disk"></i> {{#if isNew}}{{stbT 'Editor.create'}}{{else}}{{stbT 'Editor.save'}}{{/if}}</button>
+  {{/if}}
+</footer>

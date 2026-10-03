@@ -1,0 +1,19 @@
+<div class="stb stb-chat-card{{#if complete}} is-complete{{/if}}" style="--stb-clock-color: {{clock.color}};">
+  <div class="stb-chat-card__pie">{{{pie}}}</div>
+  <div class="stb-chat-card__body">
+    <header>
+      <i class="{{clock.icon}}"></i> <strong>{{name}}</strong>
+      <span class="stb-chat-card__kind">{{kindLabel}}</span>
+      {{#if isGMOnly}}<span class="stb-chat-card__gm" title="{{stbT 'Visibility.gm-only'}}"><i class="fa-solid fa-eye-slash"></i></span>{{/if}}
+    </header>
+    <ul class="stb-chat-card__lines">
+      {{#each lines}}<li>{{this}}</li>{{/each}}
+    </ul>
+    {{#if stateLabel}}<div class="stb-chat-card__state">{{stateLabel}}</div>{{/if}}
+    {{#if threshold}}{{#if threshold.note}}<div class="stb-chat-card__note">{{threshold.note}}</div>{{/if}}{{/if}}
+    <footer>
+      <span><i class="fa-solid fa-bolt"></i> {{source}}</span>
+      {{#if moment}}<span><i class="fa-regular fa-calendar"></i> {{moment}}</span>{{/if}}
+    </footer>
+  </div>
+</div>

@@ -1,0 +1,40 @@
+{
+  "id": "sargas-time-bomb",
+  "title": "Sargas Time Bomb",
+  "description": "Adventure Clock System: progress clocks, countdowns, looming threats, faction progress, corruption, alarms, projects and weather fronts that advance manually, on scene change, at rest, on elapsed campaign time, on calendar deadlines, or after configurable events. Companion to Through the Ages.",
+  "version": "0.0.0",
+  "authors": [
+    { "name": "Diego Vescovini", "url": "https://github.com/sargas79" }
+  ],
+  "url": "https://github.com/sargas79/sargas-time-bomb",
+  "manifest": "https://github.com/sargas79/sargas-time-bomb/releases/latest/download/module.json",
+  "download": "https://github.com/sargas79/sargas-time-bomb/releases/download/v0.0.0/sargas-time-bomb.zip",
+  "bugs": "https://github.com/sargas79/sargas-time-bomb/issues",
+  "changelog": "https://github.com/sargas79/sargas-time-bomb/blob/main/CHANGELOG.md",
+  "license": "LICENSE",
+  "readme": "README.md",
+  "compatibility": {
+    "minimum": "14.366",
+    "verified": "14.366"
+  },
+  "esmodules": ["scripts/module.js"],
+  "styles": ["styles/sargas-time-bomb.css"],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" }
+  ],
+  "media": [
+    { "type": "icon", "url": "https://raw.githubusercontent.com/sargas79/sargas-time-bomb/main/assets/icon.png" },
+    { "type": "cover", "url": "https://raw.githubusercontent.com/sargas79/sargas-time-bomb/main/assets/cover.png" }
+  ],
+  "relationships": {
+    "recommends": [
+      {
+        "id": "through-the-ages",
+        "type": "module",
+        "reason": "Supplies the campaign calendar used for elapsed-time triggers, deadlines, alarms and date-stamped audit logs.",
+        "compatibility": { "minimum": "2.1.0" }
+      }
+    ]
+  },
+  "socket": false
+}

@@ -1,0 +1,19 @@
+<div class="stb-hooks__content">
+  <p class="hint">{{stbT 'Hooks.hint'}}</p>
+  {{#if empty}}
+    <p>{{stbT 'Hooks.empty'}}</p>
+  {{else}}
+    <table class="stb-hooks__table">
+      <thead><tr><th>{{stbT 'Hooks.hook'}}</th><th>{{stbT 'Hooks.usedBy'}}</th><th></th></tr></thead>
+      <tbody>
+        {{#each hooks}}
+          <tr>
+            <td><code>{{hook}}</code> {{#if curated}}<span class="stb-tag">{{stbT 'Hooks.curated'}}</span>{{else}}<span class="stb-tag stb-tag--warn">{{stbT 'Hooks.custom'}}</span>{{/if}}</td>
+            <td>{{#each clocks}}{{name}}{{#unless @last}}, {{/unless}}{{/each}}</td>
+            <td>{{#if ../isGM}}<button type="button" data-action="removeHook" data-hook="{{hook}}" class="stb-danger" title="{{stbT 'Hooks.remove'}}"><i class="fa-solid fa-trash"></i></button>{{/if}}</td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  {{/if}}
+</div>

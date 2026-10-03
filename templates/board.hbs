@@ -1,0 +1,90 @@
+<div class="stb-board__wrapper stb-density--{{density}}">
+  <header class="stb-board__toolbar">
+    <input type="search" data-filter="search" value="{{filters.search}}" placeholder="{{stbT 'Board.search'}}" aria-label="{{stbT 'Board.search'}}">
+    <select data-filter="kind" aria-label="{{stbT 'Board.filterKind'}}">
+      <option value="">{{stbT 'Board.allKinds'}}</option>
+      {{#each kinds}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+    </select>
+    {{#if isGM}}
+      <select data-filter="visibility" aria-label="{{stbT 'Board.filterVisibility'}}">
+        <option value="">{{stbT 'Board.allVisibilities'}}</option>
+        {{#each visibilities}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </select>
+    {{/if}}
+    {{#if actors.length}}
+      <select data-filter="actor" aria-label="{{stbT 'Board.filterActor'}}">
+        <option value="">{{stbT 'Board.allActors'}}</option>
+        {{#each actors}}<option value="{{uuid}}" {{#if (stbEq uuid ../filters.actor)}}selected{{/if}}>{{name}}</option>{{/each}}
+      </select>
+    {{/if}}
+    <button type="button" data-action="toggleCompleted" class="{{#unless filters.showCompleted}}active{{/unless}}" title="{{stbT 'Board.toggleCompleted'}}"><i class="fa-solid fa-flag-checkered"></i></button>
+    {{#if hasFilters}}<button type="button" data-action="clearFilters" title="{{stbT 'Board.clearFilters'}}"><i class="fa-solid fa-filter-circle-xmark"></i></button>{{/if}}
+    {{#if isGM}}
+      <span class="stb-board__spacer"></span>
+      <button type="button" data-action="create" data-kind="progress" class="stb-primary"><i class="fa-solid fa-plus"></i> {{stbT 'Board.newClock'}}</button>
+      <div class="stb-board__menu">
+        <button type="button" class="stb-board__menu-toggle" title="{{stbT 'Board.more'}}"><i class="fa-solid fa-ellipsis"></i></button>
+        <div class="stb-board__menu-items">
+          <button type="button" data-action="create" data-kind="countdown"><i class="fa-solid fa-hourglass-half"></i> {{stbT 'Kind.countdown'}}</button>
+          <button type="button" data-action="create" data-kind="threat"><i class="fa-solid fa-skull"></i> {{stbT 'Kind.threat'}}</button>
+          <button type="button" data-action="create" data-kind="faction"><i class="fa-solid fa-flag"></i> {{stbT 'Kind.faction'}}</button>
+          <button type="button" data-action="create" data-kind="corruption"><i class="fa-solid fa-biohazard"></i> {{stbT 'Kind.corruption'}}</button>
+          <button type="button" data-action="create" data-kind="alarm"><i class="fa-solid fa-bell"></i> {{stbT 'Kind.alarm'}}</button>
+          <button type="button" data-action="create" data-kind="project"><i class="fa-solid fa-hammer"></i> {{stbT 'Kind.project'}}</button>
+          <button type="button" data-action="create" data-kind="weather"><i class="fa-solid fa-cloud-sun-rain"></i> {{stbT 'Kind.weather'}}</button>
+          <hr>
+          <button type="button" data-action="declareRest" data-kind="long"><i class="fa-solid fa-bed"></i> {{stbT 'Board.declareLongRest'}}</button>
+          <button type="button" data-action="declareRest" data-kind="short"><i class="fa-solid fa-mug-hot"></i> {{stbT 'Board.declareShortRest'}}</button>
+          <button type="button" data-action="evaluateNow"><i class="fa-solid fa-forward"></i> {{stbT 'Board.evaluateNow'}}</button>
+          <hr>
+          <button type="button" data-action="exportClocks"><i class="fa-solid fa-file-export"></i> {{stbT 'Board.export'}}</button>
+          <button type="button" data-action="importClocks"><i class="fa-solid fa-file-import"></i> {{stbT 'Board.import'}}</button>
+        </div>
+      </div>
+    {{/if}}
+  </header>
+
+  <div class="stb-board__status">
+    <span><i class="fa-regular fa-calendar"></i>
+      {{#if time.now}}{{time.now}}{{else}}{{stbT 'Board.noCalendar'}}{{/if}}
+      <small>({{time.sourceLabel}})</small>
+    </span>
+    {{#if isGM}}
+      <span class="stb-board__executor" title="{{stbT 'Board.executorHint'}}">
+        {{#if isPrimaryGM}}<i class="fa-solid fa-crown"></i> {{stbT 'Board.youArePrimary'}}{{else}}<i class="fa-regular fa-circle"></i> {{stbT 'Board.primaryIs' name=primaryGMName}}{{/if}}
+      </span>
+    {{/if}}
+    <span class="stb-board__count">{{stbT 'Board.count' shown=shown total=total}}</span>
+  </div>
+
+  <section class="stb-board__groups">
+    {{#if groups.length}}
+      {{#each groups}}
+        <div class="stb-group{{#if collapsed}} is-collapsed{{/if}}" data-group="{{key}}">
+          <h3 class="stb-group__header" data-action="toggleGroup">
+            <i class="fa-solid fa-chevron-{{#if collapsed}}right{{else}}down{{/if}}"></i>
+            {{name}} <span class="stb-group__count">{{count}}</span>
+          </h3>
+          {{#unless collapsed}}
+            <div class="stb-group__cards">
+              {{#each cards}}{{> "modules/sargas-time-bomb/templates/partials/clock-card.hbs" this}}{{/each}}
+            </div>
+          {{/unless}}
+        </div>
+      {{/each}}
+    {{else}}
+      <div class="stb-board__empty">
+        <i class="fa-regular fa-clock"></i>
+        <p>{{#if total}}{{stbT 'Board.emptyFiltered'}}{{else}}{{stbT 'Board.empty'}}{{/if}}</p>
+        {{#if isGM}}<p class="hint">{{stbT 'Board.dropHint'}}</p>{{/if}}
+      </div>
+    {{/if}}
+  </section>
+
+  {{#if isGM}}
+    <footer class="stb-board__footer">
+      {{#if time.ttaMissing}}<span class="hint"><i class="fa-solid fa-circle-info"></i> {{stbT 'Board.ttaRecommended'}}</span>{{/if}}
+      <span class="hint stb-board__drop"><i class="fa-solid fa-user-plus"></i> {{stbT 'Board.dropHint'}}</span>
+    </footer>
+  {{/if}}
+</div>

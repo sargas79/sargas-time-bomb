@@ -1,0 +1,63 @@
+/**
+ * SVG pie rendering shared by the board, the editor preview and chat cards.
+ * Pure string building; no Foundry globals.
+ */
+import { escapeHTML } from "../compat.js";
+import { currentLabel, isComplete } from "../services/clock-service.js";
+
+function polar(cx, cy, r, angle) {
+  const a = (angle - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+}
+
+function wedge(cx, cy, r, start, end) {
+  const s = polar(cx, cy, r, end);
+  const e = polar(cx, cy, r, start);
+  const large = end - start <= 180 ? 0 : 1;
+  return `M ${cx} ${cy} L ${s.x.toFixed(3)} ${s.y.toFixed(3)} A ${r} ${r} 0 ${large} 0 ${e.x.toFixed(3)} ${e.y.toFixed(3)} Z`;
+}
+
+/**
+ * Render a clock as an inline SVG string.
+ * options: { size = 64, showLabel = false }
+ */
+export function renderPie(clock, { size = 64, title = null } = {}) {
+  const color = /^#[0-9a-f]{6}$/i.test(clock.color ?? "") ? clock.color : "#3d6b8f";
+  const n = Math.max(0, clock.segments | 0);
+  const label = escapeHTML(title ?? clock.name ?? "");
+  const complete = isComplete(clock);
+  const cx = 50, cy = 50, r = 46;
+  const parts = [];
+  parts.push(`<svg class="stb-pie${complete ? " stb-pie--complete" : ""}" viewBox="0 0 100 100" width="${size}" height="${size}" role="img" aria-label="${label}" data-segments="${n}" data-filled="${clock.filled | 0}">`);
+  parts.push(`<title>${label}</title>`);
+  if (n === 0) {
+    // Alarm: a bell-ish ring, lit when fired.
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r}" class="stb-pie__ring" fill="${complete ? color : "none"}" stroke="${color}" stroke-width="6" opacity="${complete ? 1 : 0.6}"/>`);
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r / 3}" fill="${color}" opacity="${complete ? 1 : 0.35}"/>`);
+  } else if (n === 1) {
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="${r}" class="stb-pie__segment${clock.filled >= 1 ? " is-filled" : ""}" fill="${clock.filled >= 1 ? color : "transparent"}" stroke="currentColor" stroke-width="1.5"/>`);
+  } else {
+    const step = 360 / n;
+    for (let i = 0; i < n; i++) {
+      const filled = clock.direction === "drain" ? i < clock.filled : i < clock.filled;
+      const threshold = (clock.thresholds ?? []).find(t => t.at === i + 1);
+      parts.push(`<path d="${wedge(cx, cy, r, i * step, (i + 1) * step)}" class="stb-pie__segment${filled ? " is-filled" : ""}${threshold ? " has-threshold" : ""}" fill="${filled ? color : "transparent"}" stroke="currentColor" stroke-width="1.5"${threshold ? ` data-threshold="${escapeHTML(threshold.label)}"` : ""}/>`);
+    }
+    for (const t of clock.thresholds ?? []) {
+      if (t.at <= 0 || t.at > n) continue;
+      const p = polar(cx, cy, r + 1, t.at * step);
+      const q = polar(cx, cy, r - 10, t.at * step);
+      parts.push(`<line x1="${p.x.toFixed(2)}" y1="${p.y.toFixed(2)}" x2="${q.x.toFixed(2)}" y2="${q.y.toFixed(2)}" class="stb-pie__threshold" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>`);
+    }
+  }
+  const stateLabel = currentLabel(clock);
+  if (stateLabel && size >= 48) {
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="22" class="stb-pie__hub" fill="var(--stb-pie-hub, rgba(0,0,0,.55))"/>`);
+    parts.push(`<text x="${cx}" y="${cy}" class="stb-pie__text" text-anchor="middle" dominant-baseline="central" font-size="11">${escapeHTML(stateLabel.slice(0, 8))}</text>`);
+  } else if (n > 0 && size >= 48) {
+    parts.push(`<circle cx="${cx}" cy="${cy}" r="18" class="stb-pie__hub" fill="var(--stb-pie-hub, rgba(0,0,0,.55))"/>`);
+    parts.push(`<text x="${cx}" y="${cy}" class="stb-pie__text" text-anchor="middle" dominant-baseline="central" font-size="16">${clock.filled | 0}/${n}</text>`);
+  }
+  parts.push("</svg>");
+  return parts.join("");
+}

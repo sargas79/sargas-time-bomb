@@ -1,0 +1,16 @@
+{
+  "name": "sargas-time-bomb",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Sargas Time Bomb — Adventure Clock System for Foundry VTT v14",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node tools/check-manifest.mjs",
+    "verify": "npm test && npm run check"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
