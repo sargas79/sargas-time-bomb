@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-03
+
 ### Added
 - **Player proposals** (off by default, *Allow player proposals*): a player may
   propose +1 on a project they own or a note on their own corruption clock.
@@ -13,6 +15,8 @@ All notable changes to this project are documented here. The format follows
   whisper. Requests travel on the proposing user's own User document, through
   Through the Ages' relay when it is active or an equivalent built-in
   transport otherwise. Never a module socket.
+
+## [1.0.1] - 2026-10-03
 
 ### Added
 - Board cards show when a clock last changed, by what and by whom; labelled
