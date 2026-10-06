@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-06
+
 ### Fixed
 - Chat cards showed the clock's name and "3/6" as loose text where the pie
   belonged: Foundry strips inline SVG from stored chat content. The card now
