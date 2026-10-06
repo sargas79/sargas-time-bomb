@@ -51,16 +51,40 @@ export async function relayRest(payload) {
   catch (e) { warn("rest relay failed", e); }
 }
 
-/** Primary GM side: turn relayed flags into rest payloads. */
+/**
+ * Primary GM side: turn relayed flags into rest payloads. The relaying user is
+ * taken from the updated document, never from the payload, and the handler is
+ * expected to keep only actors that user actually owns (see `ownedRestActors`).
+ */
 export function startRestRelayListener(handler) {
   on("updateUser", (user, changes) => {
     const relay = changes?.flags?.[MODULE_ID]?.[FLAG_RELAY];
-    if (!relay || !relay.nonce || seenRelays.has(relay.nonce)) return;
+    if (!relay || typeof relay.nonce !== "string" || seenRelays.has(relay.nonce)) return;
     seenRelays.add(relay.nonce);
     if (seenRelays.size > 200) seenRelays.delete(seenRelays.values().next().value);
-    const actors = Array.isArray(relay.actors) ? relay.actors.filter(a => typeof a === "string") : [];
-    handler({ actors, source: `${relay.source ?? "relay"}@${user.name ?? user.id}`, relayed: true, nonce: relay.nonce });
+    const actors = Array.isArray(relay.actors) ? relay.actors.filter(a => typeof a === "string").slice(0, 50) : [];
+    handler({ actors, source: `${relay.source ?? "relay"}@${user.name ?? user.id}`, relayed: true, nonce: relay.nonce, userId: user.id, user });
   });
+}
+
+/**
+ * Of the relayed actor uuids, keep those that resolve to a bindable actor the
+ * relaying user owns. A player can write any uuid into their own User flag, so
+ * nothing else from the relay is trusted.
+ * `resolve(uuid)` and `bindable(actor)` are injected (store-service) to keep this file free of Foundry imports.
+ */
+export function ownedRestActors(uuids, user, { resolve, bindable }) {
+  if (!user || !Array.isArray(uuids)) return [];
+  const level = globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+  const out = [];
+  for (const uuid of new Set(uuids)) {
+    const actor = resolve(uuid);
+    if (!actor || !bindable(actor)) continue;
+    let owned = false;
+    try { owned = actor.testUserPermission(user, level); } catch { owned = false; }
+    if (owned) out.push(uuid);
+  }
+  return out;
 }
 
 function on(name, fn) {

@@ -19,6 +19,7 @@ function ensureBanner() {
   banner = document.createElement("div");
   banner.className = "stb stb-break";
   banner.setAttribute("role", "timer");
+  banner.setAttribute("aria-live", "polite");
   const label = document.createElement("span");
   label.className = "stb-break__label";
   label.innerHTML = `<i class="fa-solid fa-mug-hot"></i> ${t("Break.label")}`;
@@ -85,8 +86,8 @@ export async function promptBreak() {
   const running = remainingMs(current, realNow()) > 0;
   const value = await Dialog.prompt({
     window: { title: t("Break.title") },
-    content: `<div class="stb form-group"><label>${t("Break.minutesLabel", { min: BREAK_MINUTES_MIN, max: BREAK_MINUTES_MAX })}</label><input type="number" name="minutes" min="${BREAK_MINUTES_MIN}" max="${BREAK_MINUTES_MAX}" step="1" value="${current.minutes}" autofocus></div>
-      <p class="stb hint">${t(running ? "Break.hintRunning" : "Break.hint")}</p>`,
+    content: `<div class="stb form-group"><label>${t("Break.minutesLabel")}</label><input type="number" name="minutes" min="${BREAK_MINUTES_MIN}" max="${BREAK_MINUTES_MAX}" step="1" value="${current.minutes}" autofocus></div>
+      <p class="stb hint">${t("Break.minutesHint", { min: BREAK_MINUTES_MIN, max: BREAK_MINUTES_MAX })} ${t(running ? "Break.hintRunning" : "Break.hint")}</p>`,
     ok: { label: t("Break.start"), callback: (ev, button) => button.form.elements.minutes.value },
     rejectClose: false,
     modal: true

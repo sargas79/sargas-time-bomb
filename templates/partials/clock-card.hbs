@@ -3,14 +3,14 @@
   <div class="stb-card__body">
     <header class="stb-card__header">
       <i class="{{icon}} stb-card__icon"></i>
-      <h4 class="stb-card__name" data-action="edit">{{name}}</h4>
-      <span class="stb-card__kind">{{kindLabel}}</span>
+      <h4 class="stb-card__name" data-action="edit" title="{{name}}">{{name}}</h4>
       <span class="stb-card__visibility" title="{{visibility}}">
         {{#if isGMOnly}}<i class="fa-solid fa-eye-slash"></i>{{/if}}
         {{#if isPlayers}}<i class="fa-solid fa-eye"></i>{{/if}}
         {{#if isActor}}<i class="fa-solid fa-user"></i>{{/if}}
       </span>
     </header>
+    <div class="stb-card__kind">{{kindLabel}}</div>
     <div class="stb-card__state">{{state}}</div>
     {{#if actorName}}
       <div class="stb-card__meta" data-actor-uuid="{{actorUuid}}"><a data-action="openActor"><i class="fa-solid fa-user"></i> {{actorName}}</a></div>
@@ -30,18 +30,26 @@
     {{/if}}{{/if}}{{/unless}}
     {{#if canControl}}
       <div class="stb-card__controls">
-        <button type="button" data-action="retreat" data-delta="1" {{#unless canRetreat}}disabled{{/unless}} title="{{stbT 'Board.minusOne'}}"><i class="fa-solid fa-minus"></i></button>
-        <button type="button" data-action="advance" data-delta="1" {{#unless canAdvance}}disabled{{/unless}} title="{{stbT 'Board.plusOne'}}"><i class="fa-solid fa-plus"></i></button>
+        {{#unless isAlarm}}
+          <button type="button" data-action="retreat" data-delta="1" {{#unless canRetreat}}disabled{{/unless}} title="{{stbT 'Board.minusOne'}}" aria-label="{{stbT 'Board.minusOne'}}"><i class="fa-solid fa-minus"></i></button>
+          <button type="button" data-action="advance" data-delta="1" {{#unless canAdvance}}disabled{{/unless}} title="{{stbT 'Board.plusOne'}}" aria-label="{{stbT 'Board.plusOne'}}"><i class="fa-solid fa-plus"></i></button>
+          <button type="button" data-action="setExact" title="{{stbT 'Board.setExact'}}" aria-label="{{stbT 'Board.setExact'}}"><i class="fa-solid fa-hashtag"></i></button>
+        {{/unless}}
+        {{#if hasLabels}}<button type="button" data-action="setState" title="{{stbT 'Board.setState'}}" aria-label="{{stbT 'Board.setState'}}"><i class="fa-solid fa-list"></i></button>{{/if}}
+        {{#if expired}}<button type="button" data-action="dismiss" title="{{stbT 'Board.dismiss'}}" aria-label="{{stbT 'Board.dismiss'}}"><i class="fa-solid fa-bell-slash"></i></button>{{/if}}
         <span class="stb-card__spacer"></span>
-        {{#if expired}}<button type="button" data-action="dismiss" title="{{stbT 'Board.dismiss'}}"><i class="fa-solid fa-bell-slash"></i></button>{{/if}}
-        {{#unless isAlarm}}<button type="button" data-action="setExact" title="{{stbT 'Board.setExact'}}"><i class="fa-solid fa-hashtag"></i></button>{{/unless}}
-        {{#if hasLabels}}<button type="button" data-action="setState" title="{{stbT 'Board.setState'}}"><i class="fa-solid fa-list"></i></button>{{/if}}
-        <button type="button" data-action="complete" {{#if complete}}disabled{{/if}} title="{{stbT 'Board.complete'}}"><i class="fa-solid fa-flag-checkered"></i></button>
-        <button type="button" data-action="reset" title="{{stbT 'Board.reset'}}"><i class="fa-solid fa-rotate-left"></i></button>
-        {{#if isGMOnly}}<button type="button" data-action="reveal" title="{{stbT 'Board.reveal'}}"><i class="fa-solid fa-eye"></i></button>{{/if}}
-        {{#if isPlayers}}<button type="button" data-action="hide" title="{{stbT 'Board.hide'}}"><i class="fa-solid fa-eye-slash"></i></button>{{/if}}
-        <button type="button" data-action="edit" title="{{stbT 'Board.edit'}}"><i class="fa-solid fa-pen"></i></button>
-        <button type="button" data-action="delete" class="stb-danger" title="{{stbT 'Board.delete'}}"><i class="fa-solid fa-trash"></i></button>
+        <button type="button" data-action="edit" title="{{stbT 'Board.edit'}}" aria-label="{{stbT 'Board.edit'}}"><i class="fa-solid fa-pen"></i></button>
+        <div class="stb-menu stb-card__menu">
+          <button type="button" class="stb-menu__toggle" title="{{stbT 'Board.cardMenu'}}" aria-label="{{stbT 'Board.cardMenu'}}" aria-haspopup="true" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
+          <div class="stb-menu__items">
+            <button type="button" data-action="complete" {{#if complete}}disabled{{/if}}><i class="fa-solid fa-flag-checkered"></i> {{stbT 'Board.complete'}}</button>
+            <button type="button" data-action="reset"><i class="fa-solid fa-rotate-left"></i> {{stbT 'Board.reset'}}</button>
+            {{#if isGMOnly}}<button type="button" data-action="reveal"><i class="fa-solid fa-eye"></i> {{stbT 'Board.reveal'}}</button>{{/if}}
+            {{#if isPlayers}}<button type="button" data-action="hide"><i class="fa-solid fa-eye-slash"></i> {{stbT 'Board.hide'}}</button>{{/if}}
+            <hr>
+            <button type="button" data-action="delete" class="stb-danger"><i class="fa-solid fa-trash"></i> {{stbT 'Board.delete'}}</button>
+          </div>
+        </div>
       </div>
     {{/if}}
   </div>

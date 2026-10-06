@@ -7,6 +7,14 @@ import { currentLabel, isComplete, reachedThreshold, remaining } from "../servic
 import { describeSpan, elapsedSeconds, everyToSeconds, isValidMoment } from "../services/schedule-service.js";
 import { formatMoment, timeInfo } from "../services/time-source-service.js";
 
+/** A real-world timestamp (ISO string or epoch ms) as short local date and time, without seconds. */
+export function formatRealTime(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  try { return d.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }); }
+  catch { return d.toLocaleString(); }
+}
+
 export function everyText(every) {
   const parts = [];
   for (const unit of ["weeks", "days", "hours"]) {

@@ -8,7 +8,7 @@ import { getDialogV2, getSetting, isGM, moduleVersion, notify, randomID, rerende
 import { createClock, isComplete, lastChange, nextLabel, reachedThreshold } from "../services/clock-service.js";
 import { validateClock } from "../services/validation-service.js";
 import * as proposals from "../services/proposal-service.js";
-import { everyText } from "../ui/describe.js";
+import { everyText, formatRealTime } from "../ui/describe.js";
 import * as dispatcher from "../services/dispatcher-service.js";
 import { exportEnvelope, parseImport } from "../services/portability-service.js";
 import { canView } from "../services/permission-service.js";
@@ -147,7 +147,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
         description: p.operation === proposals.PROPOSAL_OPS.ADVANCE
           ? t("Proposal.describeAdvance", { delta: p.delta > 0 ? `+${p.delta}` : p.delta, clock: p.clockName })
           : t("Proposal.describeNote", { clock: p.clockName }),
-        when: new Date(p.at).toLocaleString()
+        when: formatRealTime(p.at)
       })) : []
     };
   }
@@ -159,7 +159,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const effectLink = threshold?.effectUuid ? await enrich(`@UUID[${threshold.effectUuid}]`) : null;
     const last = lastChange(clock);
     const lastChangeText = last ? t("Board.lastChanged", {
-      when: last.campaignMoment ? formatMoment(last.campaignMoment) : new Date(last.at).toLocaleString(),
+      when: last.campaignMoment ? formatMoment(last.campaignMoment) : formatRealTime(last.at),
       source: t(`Source.${last.source}`),
       user: last.userId ? (globalThis.game.users.get(last.userId)?.name ?? "—") : "—"
     }) : null;
@@ -219,11 +219,38 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const sel of el.querySelectorAll("select[data-filter]")) {
       sel.addEventListener("change", ev => { this.#filters[ev.target.dataset.filter] = ev.target.value; this.render(); });
     }
+    BoardApp.wireMenus(el);
     if (isGM()) {
       el.addEventListener("dragover", ev => { ev.preventDefault(); el.classList.add("is-dragover"); });
       el.addEventListener("dragleave", () => el.classList.remove("is-dragover"));
       el.addEventListener("drop", ev => this.#onDrop(ev));
     }
+  }
+
+  /**
+   * Drop-down menus open on hover for the mouse and on click or Enter for
+   * everyone else. One menu is open at a time; Escape or a click elsewhere closes it.
+   */
+  static wireMenus(el) {
+    const closeAll = except => {
+      for (const m of el.querySelectorAll(".stb-menu.is-open")) {
+        if (m === except) continue;
+        m.classList.remove("is-open");
+        m.querySelector(".stb-menu__toggle")?.setAttribute("aria-expanded", "false");
+      }
+    };
+    el.addEventListener("click", ev => {
+      const toggle = ev.target.closest(".stb-menu__toggle");
+      if (toggle) {
+        const menu = toggle.closest(".stb-menu");
+        const open = menu.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", String(open));
+        closeAll(menu);
+        return;
+      }
+      closeAll(ev.target.closest(".stb-menu__items button") ? null : ev.target.closest(".stb-menu"));
+    });
+    el.addEventListener("keydown", ev => { if (ev.key === "Escape") closeAll(null); });
   }
 
   async #onDrop(event) {
@@ -303,7 +330,8 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!Dialog) return;
     const value = await Dialog.prompt({
       window: { title: t("Board.setExactTitle") },
-      content: `<div class="stb form-group"><label>${t("Board.setExactLabel", { segments: clock.segments })}</label><input type="number" name="filled" min="0" max="${clock.segments}" value="${clock.filled}" autofocus></div>`,
+      content: `<div class="stb form-group"><label>${t("Board.setExactLabel")}</label><input type="number" name="filled" min="0" max="${clock.segments}" value="${clock.filled}" autofocus></div>
+        <p class="stb hint">${t("Board.setExactHint", { segments: clock.segments })}</p>`,
       ok: { label: t("Board.apply"), callback: (ev, button) => Number(button.form.elements.filled.value) },
       rejectClose: false,
       modal: true
@@ -356,7 +384,7 @@ export class BoardApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onExport() {
     const clocks = store.getAllClocks();
-    const env = exportEnvelope(clocks, { moduleVersion: moduleVersion(), state: store.getState() });
+    const env = exportEnvelope(clocks, { moduleVersion: moduleVersion() });
     const name = `${MODULE_ID}-${new Date().toISOString().slice(0, 10)}.json`;
     foundry.utils.saveDataToFile(JSON.stringify(env, null, 2), "application/json", name);
   }

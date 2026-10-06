@@ -53,8 +53,12 @@ export function renderPie(clock, { size = 64, title = null } = {}) {
   }
   const stateLabel = currentLabel(clock);
   if (stateLabel && size >= 48) {
+    // Longer labels fit at a smaller size; anything longer still is cut with an ellipsis (the <title> carries the full text).
+    const max = size >= 88 ? 10 : 8;
+    const text = stateLabel.length > max ? `${stateLabel.slice(0, max - 1)}…` : stateLabel;
+    const fontSize = text.length > 8 ? 9 : 11;
     parts.push(`<circle cx="${cx}" cy="${cy}" r="22" class="stb-pie__hub" fill="var(--stb-pie-hub, rgba(0,0,0,.55))"/>`);
-    parts.push(`<text x="${cx}" y="${cy}" class="stb-pie__text" text-anchor="middle" dominant-baseline="central" font-size="11">${escapeHTML(stateLabel.slice(0, 8))}</text>`);
+    parts.push(`<text x="${cx}" y="${cy}" class="stb-pie__text" text-anchor="middle" dominant-baseline="central" font-size="${fontSize}">${escapeHTML(text)}</text>`);
   } else if (n > 1 && size >= 48) {
     parts.push(`<circle cx="${cx}" cy="${cy}" r="18" class="stb-pie__hub" fill="var(--stb-pie-hub, rgba(0,0,0,.55))"/>`);
     parts.push(`<text x="${cx}" y="${cy}" class="stb-pie__text" text-anchor="middle" dominant-baseline="central" font-size="16">${clock.filled | 0}/${n}</text>`);

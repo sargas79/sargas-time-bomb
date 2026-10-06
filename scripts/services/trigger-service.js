@@ -12,7 +12,7 @@
  * Result: { delta, complete, reset, matched: [triggerId], triggerState, triggerUpdates }
  */
 import { LIMITS } from "../constants.js";
-import { addSeconds, bucketElapsed, compareMoments, everyToSeconds } from "./schedule-service.js";
+import { bucketElapsed, compareMoments, everyToSeconds, momentToSeconds, secondsToMoment } from "./schedule-service.js";
 
 function emptyResult(clock) {
   return {
@@ -111,25 +111,25 @@ export function evaluate(clock, event) {
           result.matched.push(trigger.id);
           break;
         }
-        // Repeating: the due occurrence fires, plus every further occurrence
-        // that fell inside (from, to], so a long step cannot skip periods.
+        // Repeating: the pending occurrence always fires, plus every further
+        // occurrence that fell inside (from, to], so a long step cannot skip
+        // periods. Counted arithmetically: a deadline years in the past must
+        // re-arm in one evaluation, not one period per time step.
         const period = everyToSeconds(trigger.repeatEvery, event.calendar);
         if (!(period > 0)) break;
-        let at = trigger.at;
-        let count = 0;
-        let guard = 0;
-        while (guard++ < 10000 && compareMoments(event.to, at, event.calendar) >= 0) {
-          const afterFrom = !event.from || compareMoments(at, event.from, event.calendar) > 0;
-          if (count === 0 || afterFrom) count++;
-          at = addSeconds(at, period, event.calendar);
-        }
-        if (count > 0) {
-          applyAdvance(result, trigger, count);
-          state.fired = false;
-          state.lastFiredAt = event.to;
-          result.matched.push(trigger.id);
-          result.triggerUpdates[trigger.id] = { at };
-        }
+        const atS = momentToSeconds(trigger.at, event.calendar);
+        const toS = momentToSeconds(event.to, event.calendar);
+        if (Number.isNaN(atS) || Number.isNaN(toS)) break;
+        const lastK = Math.floor((toS - atS) / period); // occurrences k = 0..lastK are due
+        const fromS = event.from ? momentToSeconds(event.from, event.calendar) : NaN;
+        // k = 0 is the pending occurrence and always counts; later ones count only when they fell after `from`.
+        const firstLaterK = Math.max(1, Number.isNaN(fromS) || fromS < atS ? 1 : Math.floor((fromS - atS) / period) + 1);
+        const count = 1 + Math.max(0, lastK - firstLaterK + 1);
+        applyAdvance(result, trigger, count);
+        state.fired = false;
+        state.lastFiredAt = event.to;
+        result.matched.push(trigger.id);
+        result.triggerUpdates[trigger.id] = { at: secondsToMoment(atS + (lastK + 1) * period, event.calendar) };
         break;
       }
       default:

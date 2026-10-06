@@ -56,13 +56,15 @@ export function migrateClock(raw, options = {}) {
 export function migrateClocks(rawList, options = {}) {
   const list = Array.isArray(rawList) ? rawList : [];
   let migrated = false;
+  let newer = 0; // clocks saved by a newer schema than this version knows
   const clocks = [];
   for (const raw of list) {
     const r = migrateClock(raw, options);
     if (r.migrated) migrated = true;
+    if (r.newer) newer++;
     clocks.push(r.clock);
   }
-  return { clocks, migrated };
+  return { clocks, migrated, newer };
 }
 
 export function defaultState() {

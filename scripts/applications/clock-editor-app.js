@@ -15,7 +15,7 @@ import * as store from "../services/store-service.js";
 import { formatMoment, timeInfo, TTASource } from "../services/time-source-service.js";
 import { validateClock } from "../services/validation-service.js";
 import { renderPie } from "../ui/pie.js";
-import { triggerText } from "../ui/describe.js";
+import { formatRealTime, triggerText } from "../ui/describe.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -175,12 +175,12 @@ export class ClockEditorApp extends HandlebarsApplicationMixin(ApplicationV2) {
       showLog: this.#showLog,
       log: d.log.map(entry => ({
         ...entry,
-        when: entry.campaignMoment ? formatMoment(entry.campaignMoment) : new Date(entry.at).toLocaleString(),
+        when: entry.campaignMoment ? formatMoment(entry.campaignMoment) : formatRealTime(entry.at),
         sourceLabel: t(`Source.${entry.source}`),
         userName: entry.userId ? (globalThis.game.users.get(entry.userId)?.name ?? "—") : "—",
         deltaText: entry.delta > 0 ? `+${entry.delta}` : `${entry.delta}`
       })),
-      createdAt: d.createdAt ? new Date(d.createdAt).toLocaleString() : null
+      createdAt: d.createdAt ? formatRealTime(d.createdAt) : null
     };
   }
 

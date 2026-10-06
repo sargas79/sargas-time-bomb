@@ -9,8 +9,14 @@ events. It is designed as a companion to **Through the Ages** (`through-the-ages
 v2.1.0), which supplies the campaign calendar and clock, while still working in a
 world that does not run it.
 
-Status: approved plan; implemented on this branch (M0–M6). Work is tracked in issue #1
-and its sub-issues.
+Status: approved plan, implemented as 1.0.0 (M0–M6); work was tracked in issue #1
+and its sub-issues. Later releases went beyond it: 1.1 added player proposals
+(the D5 follow-up), 1.2 consumed the Through the Ages 2.2 signals from §6, and
+1.3 added the break timer. For anything that shipped after 1.0 (`ownerUserId`,
+`dismissed`, `triggerState.fired`, `rest.onAdventureDay`, `time.once`,
+`linked.at`, the proposal, break-timer and write-queue services, the hooks
+panel, and the settings and API they added) the README and CHANGELOG are the
+reference; this document records the decisions and the 1.0 design.
 
 ---
 
@@ -22,7 +28,7 @@ and its sub-issues.
 | D2 | Through the Ages is an **optional** dependency, declared under `relationships.recommends`. | "Must work with" TTA is satisfied by a first-class integration; a hard `requires` would stop the clocks from being useful in a world that only wants manual, scene, rest or hook triggers. Calendar-dated features degrade cleanly (see §6). |
 | D3 | Foundry v14 only (`14.366` minimum and verified) and the **PF2e system only**, Remaster rules and terminology, declared under `relationships.systems` with id `pf2e`. No rules automation: the module never changes actors, items or effects by itself. Rest detection uses PF2e's `pf2e.restForTheNight` hook plus a GM "Declare rest" control. | The table runs PF2e, and the owner's module guidelines target v14 with PF2e Remaster. Committing to one system lets rest, combat and actor handling use real PF2e signals instead of guesses across systems. TTA stays system-agnostic, which is fine for an optional dependency. |
 | D4 | The module **never writes campaign time**. It reads TTA and Foundry world time; it never calls `advanceTime`, `game.time.advance` or similar. | Removes any possibility of a feedback loop with TTA's `timeChanged` hook or its in-flight guard, and keeps "who moved the date" answerable by one module. |
-| D5 | All writes are GM-only in 1.0. Players view clocks they are allowed to see. A player-proposal relay (projects, corruption) is scheduled for 1.1 and will copy TTA's User-flag relay rather than a socket. | TTA's relay already documents why module sockets cannot authenticate a sender. Shipping the viewer first keeps 1.0 small. |
+| D5 | All writes are GM-executed. Players view clocks they are allowed to see. Player input reaches the GM only through that user's own User document (the proposal relay shipped in 1.1, and the rest relay), and the primary GM validates every relayed request against document ownership before acting; the sender is never trusted. No module socket. | TTA's relay already documents why module sockets cannot authenticate a sender. Shipping the viewer first kept 1.0 small. |
 | D6 | Trigger evaluation runs on exactly one client, the **primary GM** (lowest id among active GMs, the same election TTA uses). Manual ticks may come from any GM. | Every trigger source (hooks, settings changes, world time) fires on every client; without an executor election each tick would be applied once per connected GM. |
 | D7 | Storage follows TTA's privacy model: player-visible clocks in a world setting; GM-only and actor-bound clocks as flags on a journal entry nobody owns. Actor-bound clocks (corruption) reach the actor's owners through a read-only mirror entry that only those owners can observe (§5). | World settings reach every client; document ownership is what Foundry actually enforces. Actor flags were rejected: they reach every user who can see the actor, and any owner can rewrite them from the console. |
 | D8 | Deadlines and "last processed" moments are stored as calendar dates `{year, month, day, hour, minute}`, never as absolute day numbers. | A GM can change TTA's month lengths after the fact; dates survive that, absolute-day offsets do not. |
@@ -382,8 +388,9 @@ Each milestone leaves a loadable module and a green `npm test`.
 | **M5 Kinds polish** | corruption clocks with owner mirrors (drag-drop of character, NPC and familiar actors, token actors), PF2e condition links on thresholds, projects ("N rests left"), faction grouping and racing clocks | verified with player clients: an owner of the actor sees the clock, a user who can only see the actor does not, and the owner cannot change it from the console; party, loot, vehicle and hazard actors are refused with a message; unlinked token actors handled deliberately |
 | **M6 Release 1.0.0** | export/import, README (GM and player workflows, permissions table, storage table), CHANGELOG, icon/cover, tag `v1.0.0` | manifest check passes; install from the release manifest URL works |
 
-Follow-ups (1.1+): player proposals via a User-flag relay; pinned mini-panel of
-visible clocks; token HUD badge for corruption; TTA companion changes from §6.
+Follow-ups (1.1+): player proposals via a User-flag relay (shipped in 1.1); TTA
+companion changes from §6 (shipped in 1.2); pinned mini-panel of visible clocks
+and a token HUD badge for corruption (still open).
 
 ---
 

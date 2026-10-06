@@ -81,6 +81,7 @@ export const EVERY_UNITS = Object.freeze(["hours", "days", "weeks"]);
 
 export const LINK_WHEN = Object.freeze(["completed", "threshold"]);
 
+/** Every `source` a log entry or chat card may carry; `STB.Source.<source>` must exist for each. */
 export const SOURCES = Object.freeze([
   "manual",
   "scene",
@@ -91,7 +92,10 @@ export const SOURCES = Object.freeze([
   "linked",
   "import",
   "catchup",
-  "proposal"
+  "declared",
+  "api",
+  "proposal",
+  "adventureDay"
 ]);
 
 /** Curated Foundry hooks that may be used by a `hook` trigger. */
@@ -112,7 +116,9 @@ export const CURATED_HOOKS = Object.freeze([
 export const DENIED_TRIGGER_HOOKS = Object.freeze([
   "createSetting", "updateSetting", "preUpdateSetting", "preCreateSetting",
   "createJournalEntry", "updateJournalEntry", "deleteJournalEntry", "preUpdateJournalEntry", "preCreateJournalEntry", "preDeleteJournalEntry",
-  "updateUser", "preUpdateUser"
+  "updateUser", "preUpdateUser",
+  // Chat render hooks fire on every re-render of every message, including this module's cards.
+  "preCreateChatMessage", "renderChatMessage", "renderChatMessageHTML"
 ]);
 
 /** PF2e hooks this module relies on. Names are verified at runtime against the installed system. */

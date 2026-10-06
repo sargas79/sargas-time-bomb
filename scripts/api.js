@@ -137,7 +137,7 @@ export function buildAPI(timeHandlers = {}) {
 
     exportClocks({ includeLog = true } = {}) {
       const clocks = isGM() ? store.getAllClocks() : store.getAllClocks().filter(c => canView(c));
-      return exportEnvelope(clocks, { moduleVersion: moduleVersion(), state: store.getState(), includeLog });
+      return exportEnvelope(clocks, { moduleVersion: moduleVersion(), includeLog });
     },
     async importClocks(json, { regenerateIds = true } = {}) {
       requireGM();

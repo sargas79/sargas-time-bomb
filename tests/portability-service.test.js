@@ -6,7 +6,7 @@ import { EXPORT_FORMAT_VERSION, MODULE_ID } from "../scripts/constants.js";
 
 test("export envelope carries module, format and clocks", () => {
   const clocks = [createClock({ kind: "progress", name: "a" })];
-  const env = exportEnvelope(clocks, { moduleVersion: "1.0.0", now: "2026-01-01T00:00:00.000Z", state: { lastProcessedMoment: null } });
+  const env = exportEnvelope(clocks, { moduleVersion: "1.0.0", now: "2026-01-01T00:00:00.000Z" });
   assert.equal(env.module, MODULE_ID);
   assert.equal(env.format, EXPORT_FORMAT_VERSION);
   assert.equal(env.clocks.length, 1);

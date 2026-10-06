@@ -9,13 +9,13 @@ import * as dispatcher from "./services/dispatcher-service.js";
 import * as store from "./services/store-service.js";
 import { elapsedSeconds, isValidMoment } from "./services/schedule-service.js";
 import { postCards } from "./services/chat-service.js";
-import { relayRest, startRestRelayListener, startRestService } from "./services/rest-service.js";
+import { ownedRestActors, relayRest, startRestRelayListener, startRestService } from "./services/rest-service.js";
 import { formatMoment, startTimeSource, timeInfo } from "./services/time-source-service.js";
 import { renderPie } from "./ui/pie.js";
 import { refreshBreakTimer } from "./ui/break-timer.js";
 import { BoardMenu } from "./applications/board-app.js";
 import { HooksApp } from "./applications/hooks-app.js";
-import { registerDocumentHooks, registerSceneHooks, registerSidebarButton, refreshSidebarButton, syncHookListeners } from "./hooks.js";
+import { registerChatCardHooks, registerDocumentHooks, registerSceneHooks, registerSidebarButton, refreshSidebarButton, syncHookListeners } from "./hooks.js";
 import { startProposalService } from "./services/proposal-service.js";
 
 const TEMPLATES = [
@@ -34,13 +34,10 @@ function momentKey(m) {
 
 /**
  * Called by the active time source on every client; only the primary GM acts.
- * Elapsed time is measured from the stored "last processed" marker, never from
- * the previous hook payload, so bursts and missed events cannot lose time.
- */
-/**
  * Runs inside the write queue: the "last processed" marker is read and the
  * elapsed span computed only once every earlier batch has written, so a burst
- * of time changes cannot measure twice from the same marker.
+ * of time changes cannot measure twice from the same marker, and elapsed time
+ * is never taken from the hook payload itself.
  */
 function onTimeChange(change, options = {}) {
   if (!dispatcher.isPrimaryGM()) return Promise.resolve(null);
@@ -152,6 +149,7 @@ Hooks.once("init", () => {
 
   dispatcher.configure({ postCards, timeInfo });
   registerSidebarButton();
+  registerChatCardHooks();
 });
 
 Hooks.once("setup", () => {
@@ -172,7 +170,8 @@ Hooks.once("ready", async () => {
     // the resting client: the primary GM processes them directly, every other
     // client relays them through its User flag.
     if (payload.source === "declared") {
-      dispatcher.dispatch({ type: "rest", actors: payload.actors }, { local: payload.declaredBy === game.user.id });
+      // Declared rests are a local hook call, so they always run on the declaring GM's client.
+      dispatcher.dispatch({ type: "rest", actors: payload.actors }, { local: true });
       return;
     }
     if (dispatcher.isPrimaryGM()) dispatcher.dispatch({ type: "rest", actors: payload.actors });
@@ -180,7 +179,10 @@ Hooks.once("ready", async () => {
   });
   startRestRelayListener(payload => {
     if (!dispatcher.isPrimaryGM()) return;
-    dispatcher.dispatch({ type: "rest", actors: payload.actors });
+    // Any user can write a relay flag; count only actors that user owns (D5: no player-initiated writes).
+    const actors = ownedRestActors(payload.actors, payload.user, { resolve: store.resolveActor, bindable: store.isBindableActor });
+    if (!actors.length) { debug("rest relay ignored: no owned actors", payload.source); return; }
+    dispatcher.dispatch({ type: "rest", actors });
   });
   startTimeSource(change => {
     if (change.reconfigured && change.structureChanged) {
