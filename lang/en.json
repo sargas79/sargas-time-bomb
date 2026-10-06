@@ -214,7 +214,8 @@
       "clearFilters": "Clear filters",
       "newClock": "New clock",
       "more": "More…",
-      "evaluateNow": "Evaluate elapsed time now",
+      "evaluateNow": "Evaluate elapsed time",
+      "cardMenu": "More actions",
       "export": "Export clocks…",
       "import": "Import clocks…",
       "noCalendar": "No campaign calendar",
@@ -242,7 +243,8 @@
       "deleteTitle": "Delete clock",
       "deleteConfirm": "Delete “{name}”? This cannot be undone.",
       "setExactTitle": "Set filled segments",
-      "setExactLabel": "Filled segments (0–{segments})",
+      "setExactLabel": "Filled segments",
+      "setExactHint": "Between 0 and {segments}.",
       "apply": "Apply",
       "corruptionName": "Corruption: {name}",
       "tokenActors": "Token actors",
@@ -302,7 +304,7 @@
       "triggersHint": "Leave empty for a manual clock. Every trigger moves the clock by the given amount, completes it, or resets it.",
       "advance": "Effect",
       "scenes": "Scenes",
-      "scenesHint": "Leave empty for any scene.",
+      "scenesHint": "Leave empty for any scene. Ctrl-click (Cmd-click on a Mac) to pick several.",
       "every": "Every",
       "once": "only once",
       "timeWorldHint": "Without a campaign calendar, elapsed time is measured from Foundry world time.",
@@ -325,7 +327,7 @@
       "actorTypes": "Characters, NPCs and familiars only.",
       "groupFaction": "Faction name (required)",
       "owner": "Owner",
-      "ownerHint": "Shown on the card. Player proposals arrive in 1.1.",
+      "ownerHint": "Shown on the card. With player proposals enabled, the owner may propose +1 on this clock.",
       "ownerUnknown": "Unknown user ({id})",
       "restAdventureDay": "Also count “Next adventure day” in Through the Ages",
       "restAdventureDayHint": "The party waking up counts as a rest for this clock, even without Rest for the Night. Needs Through the Ages 2.2 or later."
@@ -368,7 +370,8 @@
     "Break": {
       "label": "Break",
       "title": "Break timer",
-      "minutesLabel": "Length in minutes ({min}–{max})",
+      "minutesLabel": "Length in minutes",
+      "minutesHint": "Between {min} and {max} minutes.",
       "hint": "Counts down in real time for everyone at the table, whatever the campaign clock does.",
       "hintRunning": "A break is already running; starting a new one replaces it.",
       "start": "Start break",
@@ -392,7 +395,8 @@
       "rewindWorldTime": "World time moved backwards. Clocks were not un-ticked; adjust manually if needed.",
       "actorTypeRefused": "“{name}” is a {type} actor; corruption clocks can only be bound to characters, NPCs and familiars.",
       "racingCreated": "Created racing clocks for {a} and {b}.",
-      "deadlinesInvalid": "The calendar's structure changed: {n} clock(s) have a deadline that no longer exists and will not fire until edited: {names}"
+      "deadlinesInvalid": "The calendar's structure changed: {n} clock(s) have a deadline that no longer exists and will not fire until edited: {names}",
+      "newerSchema": "{n} clock(s) were saved by a newer version of Sargas Time Bomb. Update the module before editing them, or they will be downgraded on save."
     },
     "Error": {
       "clockInvalid": "Not a clock.",

@@ -7,13 +7,11 @@ import {
 } from "../constants.js";
 import { kindPreset } from "../data/kinds.js";
 
-let idCounter = 0;
 /** Fallback id generator used outside Foundry (tests). */
 export function fallbackId(length = 16) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let out = "";
   for (let i = 0; i < length; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  idCounter += 1;
   return out;
 }
 
@@ -286,6 +284,23 @@ export function reachedThreshold(clock) {
   return hit;
 }
 
+/**
+ * Thresholds crossed on the way forward along the un-wrapped path of a
+ * repeating clock: from progress `prevProg` to `prevProg + d`, which may pass
+ * the end of the dial one or more times. Each threshold is reported once.
+ */
+function thresholdsCrossedWrapping(clock, prevProg, d) {
+  const reached = [];
+  const endProg = prevProg + d;
+  for (const t of clock.thresholds) {
+    const p = clock.direction === "drain" ? clock.segments - t.at : t.at; // threshold in progress units
+    for (let k = 0; p + k * clock.segments <= endProg; k++) {
+      if (p + k * clock.segments > prevProg) { reached.push(t); break; }
+    }
+  }
+  return { reached, cleared: [] };
+}
+
 function thresholdsCrossed(clock, prev, next) {
   const reached = [];
   const cleared = [];
@@ -355,7 +370,11 @@ export function applyDelta(input, delta, context = {}) {
 
   if (target === prevFilled && completions === 0) return { clock, events, changed: false };
 
-  const crossed = thresholdsCrossed(clock, prevFilled, target);
+  // A wrapping tick compares along the whole path, not just its two ends:
+  // 4 -> 1 on a 6-segment repeating clock passed 5 and 6 on the way.
+  const crossed = clock.onComplete === "repeat" && d > 0
+    ? thresholdsCrossedWrapping(clock, progress(clock), d)
+    : thresholdsCrossed(clock, prevFilled, target);
   clock.filled = target;
 
   appendLog(clock, makeLogEntry(clock, d, context));

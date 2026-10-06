@@ -6,6 +6,48 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Chat cards showed the clock's name and "3/6" as loose text where the pie
+  belonged: Foundry strips inline SVG from stored chat content. The card now
+  carries the clock snapshot in its message flag and draws the pie on render.
+- The board's `⋯` menu item "Evaluate elapsed time now" wrapped onto two lines
+  and spilled out of its button; menu items no longer wrap.
+- Card titles were drawn in the theme's condensed heading font and cut to a
+  few characters; they now use the body font, may take two lines, and the kind
+  sits on its own caption line.
+- The editor's inline rows (group, colour, icon; segments, filled, direction)
+  stacked one field per line; "Add threshold" stretched to the full width; the
+  description editor was an invisible box with a hidden edit toggle.
+- Chat cards broke words mid-syllable ("Prog / ress", "manua / l") in a narrow
+  chat column.
+- The catch-up summary card named actor-bound (corruption) clocks in the public
+  message; those clocks are now whispered to the GMs and the actor's owners.
+- A repeating calendar-date trigger whose date lay years in the past re-armed
+  one period per time step and over-ticked on the following steps; it now
+  re-arms in one evaluation.
+- A wrapping tick on a repeating clock skipped the thresholds it passed, so a
+  linked "reaches a threshold" trigger on a weather front never fired on the
+  wrap.
+- A relayed rest is now checked on the primary GM: only bindable actors the
+  relaying user owns count, and an empty relay moves nothing.
+- A free-text hook trigger on a chat render hook could feed itself with the
+  module's own cards; the module's documents are ignored by every hook trigger
+  and the chat render hooks are refused outright.
+
+### Changed
+- Card controls: `−`, `+`, set exact, set state and dismiss stay on the card;
+  complete, reset, reveal/hide and delete moved to a `⋯` menu with labels, so
+  the row no longer wraps. Alarm cards no longer show a disabled `−`/`+`.
+- Drop-down menus open on click and close on Escape as well as on hover.
+- Real-world timestamps on cards, proposals and the audit log are shown without
+  seconds.
+- The export file holds clocks only; the world's "last processed" time marker
+  is no longer written into it, and an older file's `state` block is ignored.
+- The manifest check now verifies the i18n keys built at runtime (kinds,
+  sources, settings choices, error and proposal codes).
+- A GM is warned on load when stored clocks come from a newer schema than this
+  version knows, since saving would downgrade them.
+
 ## [1.3.0] - 2026-10-03
 
 ### Added

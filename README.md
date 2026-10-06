@@ -61,7 +61,8 @@ a cycle and wraps back to the start in the same write.
 5. **Declare rest** from the board's `⋯` menu to count a rest the party did not
    take through Rest for the Night.
 6. **Export / Import** from the same menu. Imports get fresh ids and linked
-   triggers inside the file are remapped.
+   triggers inside the file are remapped. The export holds clocks only; the
+   world's "last processed" time marker stays with the world.
 7. **Break timer…** from the same menu starts a real-world countdown of 1–60
    minutes (a lunch break, a pause). Everyone sees it in a banner at the top of
    the screen and is notified when it ends; a GM can end it early with the `×`
@@ -112,6 +113,10 @@ GM, triggers are evaluated by exactly one client: the **primary GM** (lowest
 user id among connected GMs). The board shows who that is. Manual ticks and
 declared rests run on the acting GM's client. When the primary GM disconnects,
 the next GM takes over and catches up.
+
+Manual changes are serialised per client, not across clients: if two GMs press
+`+` on the same clock within the same round-trip, the later write wins and one
+tick is lost. Let one GM drive the board during play.
 
 ## Through the Ages integration
 
@@ -228,7 +233,8 @@ await game.modules.get("sargas-time-bomb").api.createClock({
   show as paused. Check *Module Settings → Time source*.
 - **A player's rest did not count.** Rests fire on the resting client and are
   relayed to the primary GM through that user's own User document. The relay
-  needs the player connected when the GM is; otherwise use **Declare rest**.
+  needs the player connected when the GM is, and only actors that player
+  *owns* are counted; otherwise use **Declare rest**.
 - **A player cannot see a corruption clock.** They must *own* the actor
   (Observer is not enough). The GM can run `api.syncMirrors()` to rebuild the
   owner mirrors.

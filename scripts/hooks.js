@@ -6,6 +6,7 @@ import { CURATED_HOOKS, DENIED_TRIGGER_HOOKS, FLAG_MIRROR_FOR, MODULE_ID, SETTIN
 import { debug, getSetting, isGM, rerenderModuleApps, setSetting, t } from "./compat.js";
 import * as dispatcher from "./services/dispatcher-service.js";
 import * as store from "./services/store-service.js";
+import { renderPie } from "./ui/pie.js";
 import { BoardApp } from "./applications/board-app.js";
 
 let lastActiveSceneId = null;
@@ -52,6 +53,26 @@ export function refreshSidebarButton() {
   if (!el) return;
   el.querySelector(".stb-sidebar-button")?.remove();
   insertButton(el);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Chat cards                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Foundry strips inline SVG from stored chat content, so a card carries the
+ * clock snapshot in its flag and the pie is drawn into the card on render.
+ */
+export function registerChatCardHooks() {
+  Hooks.on("renderChatMessageHTML", (message, html) => {
+    const pie = message?.flags?.[MODULE_ID]?.pie;
+    if (!pie || typeof pie !== "object") return;
+    const root = html instanceof HTMLElement ? html : html?.[0];
+    const slot = root?.querySelector?.("[data-stb-pie]");
+    if (!slot) return;
+    try { slot.innerHTML = renderPie(pie, { size: 72 }); }
+    catch (e) { debug("chat pie failed", e); }
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,10 +161,13 @@ function queueSyncHooks() {
 
 function onHookEvent(name, args) {
   if (!dispatcher.isPrimaryGM()) return;
+  // Never react to this module's own documents (chat cards, mirrors): a trigger
+  // on their hook would feed itself.
+  const first = args[0];
+  if (first && typeof first === "object" && first.flags?.[MODULE_ID]) return;
   let isRoll;
   if (name === "createChatMessage") {
-    const message = args[0];
-    if (message?.flags?.[MODULE_ID]) return; // never react to our own cards
+    const message = first;
     // PF2e check rolls carry a context type (attack-roll, skill-check, saving-throw, ...).
     const hasRoll = message?.isRoll ?? (Array.isArray(message?.rolls) && message.rolls.length > 0);
     const pf2eContext = message?.flags?.pf2e?.context?.type;

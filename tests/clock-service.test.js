@@ -243,3 +243,20 @@ test("a manual reset re-arms once-triggers but leaves a past one-shot deadline f
   const noMoment = resetClock(c, ctx);
   assert.equal(noMoment.clock.triggerState.d.fired, false, "without a current moment everything re-arms");
 });
+
+test("a wrapping tick on a repeating clock reaches the thresholds it passed", () => {
+  const rep = normalizeClock({ kind: "progress", segments: 6, onComplete: "repeat", filled: 4, thresholds: [{ at: 5, label: "five" }, { at: 6, label: "six" }, { at: 2, label: "two" }] });
+  const r = applyDelta(rep, 3, ctx); // 4 -> 7: one completion, lands on 1; passed 5 and 6 on the way
+  assert.equal(r.clock.filled, 1);
+  assert.deepEqual(r.events.filter(e => e.type === "thresholdReached").map(e => e.threshold.label).sort(), ["five", "six"]);
+  assert.equal(r.events.filter(e => e.type === "thresholdCleared").length, 0, "the completion already says the dial restarted");
+  // Two full turns and more: every threshold once, not once per turn.
+  const r2 = applyDelta(rep, 14, ctx); // 4 -> 18: three completions, lands on 0
+  assert.equal(r2.clock.filled, 0);
+  assert.deepEqual(r2.events.filter(e => e.type === "thresholdReached").map(e => e.threshold.label).sort(), ["five", "six", "two"]);
+  // A draining repeat clock counts thresholds in progress space too.
+  const drain = normalizeClock({ kind: "countdown", segments: 6, direction: "drain", onComplete: "repeat", filled: 2, thresholds: [{ at: 1, label: "one" }] });
+  const r3 = applyDelta(drain, 3, ctx); // 2 -> -1: wraps and lands on 5; passed filled 1 on the way
+  assert.equal(r3.clock.filled, 5);
+  assert.deepEqual(r3.events.filter(e => e.type === "thresholdReached").map(e => e.threshold.label), ["one"]);
+});

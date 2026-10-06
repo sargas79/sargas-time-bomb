@@ -5,14 +5,17 @@ import { CURRENT_SCHEMA_VERSION, EXPORT_FORMAT_VERSION, LIMITS, MODULE_ID } from
 import { migrateClock } from "./migration-service.js";
 import { validateClock } from "./validation-service.js";
 
-export function exportEnvelope(clocks, { moduleVersion = "0.0.0", state = null, now = new Date().toISOString(), includeLog = true } = {}) {
+/**
+ * The export carries clocks only. The world's "last processed" time marker is
+ * bookkeeping for one world and is never exported or imported.
+ */
+export function exportEnvelope(clocks, { moduleVersion = "0.0.0", now = new Date().toISOString(), includeLog = true } = {}) {
   return {
     module: MODULE_ID,
     moduleVersion,
     format: EXPORT_FORMAT_VERSION,
     schemaVersion: CURRENT_SCHEMA_VERSION,
     exportedAt: now,
-    state: state ? { lastProcessedMoment: state.lastProcessedMoment ?? null, lastProcessedWorldTime: state.lastProcessedWorldTime ?? null } : null,
     clocks: (clocks ?? []).map(c => includeLog ? c : { ...c, log: [] })
   };
 }
@@ -20,16 +23,17 @@ export function exportEnvelope(clocks, { moduleVersion = "0.0.0", state = null, 
 /**
  * Parse an import payload (string or object).
  * options: { regenerateIds, existingClocks, idGen, calendar }
- * Returns { ok, clocks, errors: [{code, data}], skipped: [{ index, errors }] , state }
+ * Returns { ok, clocks, errors: [{code, data}], skipped: [{ index, errors }] }
+ * A `state` block from an older export is ignored.
  */
 export function parseImport(payload, { regenerateIds = true, existingClocks = [], idGen, calendar = null } = {}) {
   const errors = [];
   let data = payload;
   if (typeof payload === "string") {
     try { data = JSON.parse(payload); }
-    catch (e) { return { ok: false, clocks: [], errors: [{ code: "importJson", data: { message: e.message } }], skipped: [], state: null }; }
+    catch (e) { return { ok: false, clocks: [], errors: [{ code: "importJson", data: { message: e.message } }], skipped: [] }; }
   }
-  if (!data || typeof data !== "object") return { ok: false, clocks: [], errors: [{ code: "importShape" }], skipped: [], state: null };
+  if (!data || typeof data !== "object") return { ok: false, clocks: [], errors: [{ code: "importShape" }], skipped: [] };
 
   // Accept a bare array of clocks as well as the envelope.
   let list;
@@ -37,14 +41,14 @@ export function parseImport(payload, { regenerateIds = true, existingClocks = []
   else {
     if (data.module && data.module !== MODULE_ID) errors.push({ code: "importModule", data: { module: data.module } });
     if (Number.isFinite(data.format) && data.format > EXPORT_FORMAT_VERSION) {
-      return { ok: false, clocks: [], errors: [{ code: "importNewer", data: { format: data.format, supported: EXPORT_FORMAT_VERSION } }], skipped: [], state: null };
+      return { ok: false, clocks: [], errors: [{ code: "importNewer", data: { format: data.format, supported: EXPORT_FORMAT_VERSION } }], skipped: [] };
     }
     if (Number.isFinite(data.schemaVersion) && data.schemaVersion > CURRENT_SCHEMA_VERSION) {
-      return { ok: false, clocks: [], errors: [{ code: "importNewerSchema", data: { schemaVersion: data.schemaVersion, supported: CURRENT_SCHEMA_VERSION } }], skipped: [], state: null };
+      return { ok: false, clocks: [], errors: [{ code: "importNewerSchema", data: { schemaVersion: data.schemaVersion, supported: CURRENT_SCHEMA_VERSION } }], skipped: [] };
     }
     list = Array.isArray(data.clocks) ? data.clocks : null;
   }
-  if (!list) return { ok: false, clocks: [], errors: [...errors, { code: "importNoClocks" }], skipped: [], state: null };
+  if (!list) return { ok: false, clocks: [], errors: [...errors, { code: "importNoClocks" }], skipped: [] };
 
   const existingIds = new Set(existingClocks.map(c => c.id));
   const clocks = [];
@@ -75,8 +79,7 @@ export function parseImport(payload, { regenerateIds = true, existingClocks = []
     clocks.push(clock);
   }
   if (existingClocks.length + clocks.length > LIMITS.CLOCKS_MAX) {
-    return { ok: false, clocks: [], errors: [...errors, { code: "importTooMany", data: { max: LIMITS.CLOCKS_MAX } }], skipped, state: null };
+    return { ok: false, clocks: [], errors: [...errors, { code: "importTooMany", data: { max: LIMITS.CLOCKS_MAX } }], skipped };
   }
-  const state = !Array.isArray(data) && data.state && typeof data.state === "object" ? data.state : null;
-  return { ok: true, clocks, errors, skipped, state };
+  return { ok: true, clocks, errors, skipped };
 }

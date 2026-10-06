@@ -276,3 +276,36 @@ test("chat cards respect the visibility mode and whisper GM-only clocks", async 
     dispatcher.configure({ postCards: null });
   } finally { stub.uninstall(); }
 });
+
+test("catch-up summaries whisper actor-owner clocks to the GMs and that actor's owners only", async () => {
+  const stub = installFoundryStub(stubOpts);
+  try {
+    const { chat } = await load();
+    const hero = stub.addActor({ id: "hero", name: "Hero", ownership: { p1: 3 } });
+    const pub = createClock({ kind: "progress", name: "Public", visibility: "players", segments: 4 });
+    const corr = createClock({ kind: "corruption", name: "Secret taint", visibility: "actor-owners", actorUuid: hero.uuid, segments: 6 });
+    const ev = { type: "advanced", delta: 1, filled: 1 };
+    await chat.postCards([{ clock: pub, events: [ev], source: "catchup" }, { clock: corr, events: [ev], source: "catchup" }], { source: "catchup" });
+    assert.equal(stub.chat.length, 2);
+    const open = stub.chat.find(m => m.whisper === undefined);
+    const whispered = stub.chat.find(m => Array.isArray(m.whisper));
+    assert.ok(open.content.includes("Public") && !open.content.includes("Secret taint"), "the public card never names the corruption clock");
+    assert.ok(whispered.content.includes("Secret taint"));
+    assert.deepEqual([...whispered.whisper].sort(), ["gmA", "gmB", "p1"]);
+  } finally { stub.uninstall(); }
+});
+
+test("a chat card carries the pie snapshot in its flag, never inline SVG", async () => {
+  const stub = installFoundryStub(stubOpts);
+  try {
+    const { chat } = await load();
+    const pub = createClock({ kind: "progress", name: "P", visibility: "players", segments: 4, filled: 2 });
+    await chat.postCards([{ clock: pub, events: [{ type: "advanced", delta: 1, filled: 2 }], source: "manual" }], {});
+    assert.equal(stub.chat.length, 1);
+    const pie = stub.chat[0].flags[MODULE_ID].pie;
+    assert.equal(pie.filled, 2);
+    assert.equal(pie.segments, 4);
+    assert.equal(pie.kind, "progress");
+    assert.ok(!/<svg/.test(stub.chat[0].content));
+  } finally { stub.uninstall(); }
+});

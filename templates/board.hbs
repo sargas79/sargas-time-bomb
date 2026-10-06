@@ -22,9 +22,9 @@
     {{#if isGM}}
       <span class="stb-board__spacer"></span>
       <button type="button" data-action="create" data-kind="progress" class="stb-primary"><i class="fa-solid fa-plus"></i> {{stbT 'Board.newClock'}}</button>
-      <div class="stb-board__menu">
-        <button type="button" class="stb-board__menu-toggle" title="{{stbT 'Board.more'}}"><i class="fa-solid fa-ellipsis"></i></button>
-        <div class="stb-board__menu-items">
+      <div class="stb-menu stb-board__menu">
+        <button type="button" class="stb-menu__toggle" title="{{stbT 'Board.more'}}" aria-label="{{stbT 'Board.more'}}" aria-haspopup="true" aria-expanded="false"><i class="fa-solid fa-ellipsis"></i></button>
+        <div class="stb-menu__items">
           <button type="button" data-action="create" data-kind="countdown"><i class="fa-solid fa-hourglass-half"></i> {{stbT 'Kind.countdown'}}</button>
           <button type="button" data-action="create" data-kind="threat"><i class="fa-solid fa-skull"></i> {{stbT 'Kind.threat'}}</button>
           <button type="button" data-action="create" data-kind="faction"><i class="fa-solid fa-flag"></i> {{stbT 'Kind.faction'}}</button>

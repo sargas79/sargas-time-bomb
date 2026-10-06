@@ -103,11 +103,6 @@ function storeKeyFor(clock) {
   return clock.visibility === VISIBILITY.PLAYERS ? "public" : "private";
 }
 
-function stripForStorage(clock) {
-  // Visibility is implied by the store, but keeping it makes exports simpler.
-  return clock;
-}
-
 /**
  * Apply a batch of changes in one serialised write per affected store.
  * changes: { upsert: [clock], remove: [id], state: partial }
@@ -153,7 +148,7 @@ async function performWrite({ upsert = [], remove = [], state = null } = {}) {
     }
     const s = ensure(newKey);
     const idx = s.list.findIndex(c => c.id === clock.id);
-    if (idx >= 0) s.list[idx] = stripForStorage(clock); else s.list.push(stripForStorage(clock));
+    if (idx >= 0) s.list[idx] = clock; else s.list.push(clock);
     s.dirty = true;
   }
 
@@ -358,6 +353,13 @@ export async function migrateStoredData() {
   }
   const st = migrateState(getSetting(SETTINGS.state));
   if (st.migrated) { await setSetting(SETTINGS.state, st.state); changed = true; }
+  // Records from a newer schema are kept as they are, but the next save would
+  // write them back in this version's shape: say so once, on load.
+  const newer = pub.newer + (entry ? migrateClocks(entry.getFlag(MODULE_ID, FLAG_CLOCKS) ?? []).newer : 0);
+  if (newer > 0) {
+    warn(`${newer} clock(s) were saved by a newer version of this module; editing them here will downgrade them.`);
+    try { globalThis.ui?.notifications?.warn?.(globalThis.game?.i18n?.format?.("STB.Notify.newerSchema", { n: newer }) ?? `${newer} clock(s) come from a newer version`, { permanent: true }); } catch { /* notification is best effort */ }
+  }
   return changed;
 }
 

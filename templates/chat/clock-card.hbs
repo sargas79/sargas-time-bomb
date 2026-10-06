@@ -1,5 +1,6 @@
 <div class="stb stb-chat-card{{#if complete}} is-complete{{/if}}" style="--stb-clock-color: {{clock.color}};">
-  <div class="stb-chat-card__pie">{{{pie}}}</div>
+  {{!-- Foundry strips inline SVG from stored chat content; the pie is drawn on render from the message flag. --}}
+  <div class="stb-chat-card__pie" data-stb-pie><span class="stb-chat-card__fallback">{{fallback}}</span></div>
   <div class="stb-chat-card__body">
     <header>
       <i class="{{clock.icon}}"></i> <strong>{{name}}</strong>

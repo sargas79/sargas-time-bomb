@@ -79,6 +79,30 @@ for (const [key, where] of used) {
   if (!flat.has(key)) note(`missing i18n key ${key} (used in ${[...where].join(", ")})`);
 }
 
+/* ---------- key families built at runtime (`STB.Kind.${kind}` and friends) ---------- */
+// Template literals are invisible to the regexes above, so every enumerated value is checked here.
+const C = await import(pathToFileURL(join(root, "scripts/constants.js")).href);
+const codesIn = (file, re) => [...readFileSync(join(root, file), "utf8").matchAll(re)].map(m => m[1]);
+const families = [
+  ["Kind", C.KINDS], ["KindHint", C.KINDS],
+  ["Direction", C.DIRECTIONS], ["OnComplete", C.ON_COMPLETE], ["Visibility", C.VISIBILITIES],
+  ["TriggerType", C.TRIGGER_TYPES], ["LinkWhen", C.LINK_WHEN], ["Every", [...C.EVERY_UNITS, "none"]], ["Unit", C.EVERY_UNITS],
+  ["Hook", C.CURATED_HOOKS.map(h => h.key)], ["Source", C.SOURCES],
+  ["Settings.timeSource", C.TIME_SOURCES], ["Settings.chatCards", C.CHAT_CARD_MODES],
+  ["Settings.sceneTriggerMode", C.SCENE_TRIGGER_MODES], ["Settings.playerBoardDensity", C.DENSITIES],
+  ["Error", codesIn("scripts/services/validation-service.js", /\berr\(\s*"([A-Za-z]+)"/g)],
+  ["Error", codesIn("scripts/services/portability-service.js", /\bcode:\s*"([A-Za-z]+)"/g)],
+  ["Proposal.Error", codesIn("scripts/services/proposal-service.js", /\bcode:\s*"([A-Za-z]+)"/g)]
+];
+let familyKeys = 0;
+for (const [prefix, values] of families) {
+  for (const v of new Set(values)) {
+    familyKeys++;
+    const key = `STB.${prefix}.${v}`;
+    if (!flat.has(key)) note(`missing i18n key ${key} (built at runtime from ${prefix})`);
+  }
+}
+
 /* ---------- pure modules must import without Foundry ---------- */
 const pure = [
   "scripts/constants.js", "scripts/data/kinds.js", "scripts/compat.js",
@@ -112,4 +136,4 @@ if (problems.length) {
   for (const p of problems) console.error(` - ${p}`);
   process.exit(1);
 }
-console.log(`check-manifest: ok (${used.size} i18n keys verified, ${pure.length} modules import cleanly)`);
+console.log(`check-manifest: ok (${used.size} literal + ${familyKeys} enumerated i18n keys verified, ${pure.length} modules import cleanly)`);

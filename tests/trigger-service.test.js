@@ -151,3 +151,18 @@ test("describeTrigger returns i18n keys", () => {
   assert.equal(describeTrigger({ type: "date", repeatEvery: { days: 1 } }).key, "dateRepeat");
   assert.equal(describeTrigger({}).key, "unknown");
 });
+
+test("repeating date trigger years overdue re-arms in a single evaluation and does not double-fire later", () => {
+  const at = { year: 1, month: 1, day: 1, hour: 0, minute: 0 };
+  const hourly = mk([{ id: "d", type: "date", advance: 1, at, repeatEvery: { hours: 1 } }]);
+  // Two years later: the pending occurrence plus the one inside this hour fire, and the
+  // trigger is re-armed past `to` in one go, not one period per time step.
+  const r1 = evaluate(hourly, { type: "time", seconds: 3600, from: { year: 3, month: 1, day: 1, hour: 0, minute: 0 }, to: { year: 3, month: 1, day: 1, hour: 1, minute: 0 }, calendar: CAL });
+  assert.equal(r1.delta, 2);
+  assert.deepEqual(r1.triggerUpdates.d.at, { year: 3, month: 1, day: 1, hour: 2, minute: 0 });
+  const armed = applyTriggerUpdates({ ...hourly, triggerState: r1.triggerState }, r1.triggerUpdates);
+  // The next hour is exactly one occurrence, not the backlog.
+  const r2 = evaluate(armed, { type: "time", seconds: 3600, from: { year: 3, month: 1, day: 1, hour: 1, minute: 0 }, to: { year: 3, month: 1, day: 1, hour: 2, minute: 0 }, calendar: CAL });
+  assert.equal(r2.delta, 1);
+  assert.deepEqual(r2.triggerUpdates.d.at, { year: 3, month: 1, day: 1, hour: 3, minute: 0 });
+});
